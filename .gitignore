@@ -1,0 +1,13 @@
+# Go
+/bin/
+/pkg/
+
+# Environment
+.env
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
