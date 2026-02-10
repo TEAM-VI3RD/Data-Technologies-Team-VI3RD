@@ -1,19 +1,34 @@
-package main
+package db
 
 import (
+	"database/sql"
+	"fmt"
 	"log"
-	"net/http"
+	"os"
 
-	"webshop-backend/internal/handlers"
+	_ "github.com/go-sql-driver/mysql"
 )
 
-func main() {
-	mux := http.NewServeMux()
+var DB *sql.DB
 
-	// API routes
-	mux.HandleFunc("/api/health", handlers.Health)
-	mux.HandleFunc("/api/producten", handlers.Producten)
+func Connect() {
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	host := os.Getenv("DB_HOST")
+	port := os.Getenv("DB_PORT")
+	name := os.Getenv("DB_NAME")
 
-	log.Println("Server draait op http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", user, password, host, port, name)
+	database, err := sql.Open("mysql", dsn)
+	if err != nil {
+		log.Fatalf("Cannot open database: %v", err)
+	}
+
+	// Ping om verbinding te checken
+	if err := database.Ping(); err != nil {
+		log.Fatalf("Cannot connect to database: %v", err)
+	}
+
+	DB = database
+	fmt.Println("Database connected successfully")
 }

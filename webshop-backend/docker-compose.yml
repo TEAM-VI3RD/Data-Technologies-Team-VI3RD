@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: webshop-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: webshop
+      MYSQL_USER: webshop
+      MYSQL_PASSWORD: webshop123
+    ports:
+      - "3307:3306"   # host:container
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql  # seed script bij opstart
+
+  backend:
+    build: .
+    container_name: webshop-backend
+    ports:
+      - "9090:8080"   # host:container
+    env_file:
+      - env.env
+    depends_on:
+      - db
+
+volumes:
+  db_data:
