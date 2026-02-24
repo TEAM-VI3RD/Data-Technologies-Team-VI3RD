@@ -21,6 +21,8 @@ COPY --from=builder /app/webshop-backend .
 COPY env.env .
 COPY wait-for-db.sh .
 
+RUN sed -i 's/\r$//' wait-for-db.sh
+
 # Maak wait script uitvoerbaar
 RUN chmod +x wait-for-db.sh
 
