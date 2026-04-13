@@ -18,7 +18,7 @@ WORKDIR /app
 
 # Copy binary & env
 COPY --from=builder /app/webshop-backend .
-COPY env.env .
+COPY .env .
 COPY wait-for-db.sh .
 
 RUN sed -i 's/\r$//' wait-for-db.sh
