@@ -1,30 +1,44 @@
 services:
+
+  # --------------------------------------------------------------------------
+  # PostgreSQL database
+  # --------------------------------------------------------------------------
   db:
-    image: mysql:8.0
+    image: postgres:16-alpine
     container_name: webshop-db
-    restart: always
+    restart: unless-stopped
     env_file:
       - .env
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB:       ${DB_NAME}
+      POSTGRES_USER:     ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "3307:3306"
+      - "5432:5432"
     volumes:
-      - db_data:/var/lib/mysql
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - db_data:/var/lib/postgresql/data
+      # SQL file is executed once on first container start (when data volume is empty).
+      - ./migrations/001_init.sql:/docker-entrypoint-initdb.d/001_init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
+  # --------------------------------------------------------------------------
+  # Go backend
+  # --------------------------------------------------------------------------
   backend:
     build: .
     container_name: webshop-backend
+    restart: unless-stopped
     ports:
-      - "9090:8080"
+      - "8080:8080"
     env_file:
       - .env
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
 volumes:
   db_data:

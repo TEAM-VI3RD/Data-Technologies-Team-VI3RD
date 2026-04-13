@@ -1,33 +1,31 @@
-# Stage 1: Build Go binary
+# =============================================================================
+# Stage 1 — Build
+# =============================================================================
 FROM golang:1.25-alpine AS builder
+
 WORKDIR /app
 
-# Dependencies
+# Download dependencies first (layer-cached until go.mod/go.sum change).
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy project
+# Copy source and compile a statically-linked binary.
 COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o webshop-backend ./cmd/webshop-backend
 
-# Build binary
-RUN go build -o webshop-backend ./cmd/webshop-backend
+# =============================================================================
+# Stage 2 — Runtime
+# =============================================================================
+FROM alpine:3.21
 
-# Stage 2: Run
-FROM alpine:latest
 WORKDIR /app
 
-# Copy binary & env
+# netcat (nc) is required by wait-for-db.sh to poll the DB port.
+RUN apk add --no-cache netcat-openbsd
+
+# Copy only what the container needs at runtime.
 COPY --from=builder /app/webshop-backend .
-COPY .env .
-COPY wait-for-db.sh .
 
-RUN sed -i 's/\r$//' wait-for-db.sh
-
-# Maak wait script uitvoerbaar
-RUN chmod +x wait-for-db.sh
-
-# Expose port
 EXPOSE 8080
 
-# Start backend via wait script
-CMD ["./wait-for-db.sh"]
+CMD ["./webshop-backend"]

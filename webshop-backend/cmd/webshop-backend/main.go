@@ -4,58 +4,41 @@ import (
 	"log"
 	"net/http"
 	"webshop-backend/internal/db"
-	"webshop-backend/pkg/models"
+	"webshop-backend/internal/handler"
+	"webshop-backend/internal/repository"
 
 	"github.com/gin-gonic/gin"
 )
 
-// @title Webshop API
-// @version 1.0
-// @description Simple webshop backend in Go using raw SQL
-// @host localhost:8080
-// @BasePath /
-
 func main() {
-	// Verbind met database
+	// 1. Connect to PostgreSQL (exits on failure).
 	db.Connect()
 
-	// Gin router
+	// 2. Wire dependencies: DB → Repository → Handler.
+	//    Dependency injection by hand — no DI framework needed at this scale.
+	productRepo := repository.NewProductRepository(db.DB)
+	productHandler := handler.NewProductHandler(productRepo)
+
+	// 3. Configure the router.
 	router := gin.Default()
 
-	// Routes
-	router.GET("/products", getProducts)
+	// Health check — useful for Docker/k8s readiness probes.
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
 
-	// Start server
+	// Product routes.
+	products := router.Group("/products")
+	{
+		products.GET("", productHandler.GetAll)
+		products.GET("/:id", productHandler.GetByID)
+		products.POST("", productHandler.Create)
+		products.PUT("/:id", productHandler.Update)
+		products.DELETE("/:id", productHandler.Delete)
+	}
+
+	// 4. Start HTTP server.
 	if err := router.Run(":8080"); err != nil {
-		log.Fatal("Failed to start server:", err)
+		log.Fatalf("Server failed to start: %v", err)
 	}
-}
-
-// getProducts godoc
-// @Summary Get all products
-// @Description Retrieves all products from the database
-// @Tags products
-// @Produce json
-// @Success 200 {array} models.Product
-// @Failure 500 {object} gin.H{"error": "string"}
-// @Router /products [get]
-func getProducts(c *gin.Context) {
-	rows, err := db.DB.Query("SELECT id, name, description, price FROM products")
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Cannot query database"})
-		return
-	}
-	defer rows.Close()
-
-	var products []models.Product
-	for rows.Next() {
-		var p models.Product
-		if err := rows.Scan(&p.ID, &p.Name, &p.Description, &p.Price); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan row"})
-			return
-		}
-		products = append(products, p)
-	}
-
-	c.JSON(http.StatusOK, products)
 }
