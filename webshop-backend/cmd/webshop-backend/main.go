@@ -15,9 +15,11 @@ func main() {
 	db.Connect()
 
 	// 2. Wire dependencies: DB → Repository → Handler.
-	//    Dependency injection by hand — no DI framework needed at this scale.
 	productRepo := repository.NewProductRepository(db.DB)
 	productHandler := handler.NewProductHandler(productRepo)
+
+	userRepo := repository.NewUserRepository(db.DB)
+	authHandler := handler.NewAuthHandler(userRepo)
 
 	// 3. Configure the router.
 	router := gin.Default()
@@ -26,6 +28,13 @@ func main() {
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
+
+	// Auth routes.
+	auth := router.Group("/auth")
+	{
+		auth.POST("/register", authHandler.Register)
+		auth.POST("/login", authHandler.Login)
+	}
 
 	// Product routes.
 	products := router.Group("/products")
