@@ -77,6 +77,11 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
+	if user.Blocked {
+		c.JSON(http.StatusForbidden, gin.H{"error": "account is blocked"})
+		return
+	}
+
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
 		return
@@ -98,9 +103,10 @@ func generateToken(user *models.User) (string, error) {
 	}
 
 	claims := jwt.MapClaims{
-		"user_id": user.ID,
-		"email":   user.Email,
-		"exp":     time.Now().Add(24 * time.Hour).Unix(),
+		"user_id":  user.ID,
+		"email":    user.Email,
+		"is_admin": user.IsAdmin,
+		"exp":      time.Now().Add(24 * time.Hour).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

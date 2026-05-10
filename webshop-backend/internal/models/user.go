@@ -7,6 +7,8 @@ type User struct {
 	Email        string    `json:"email"`
 	FullName     string    `json:"full_name"`
 	PasswordHash string    `json:"-"`
+	IsAdmin      bool      `json:"is_admin"`
+	Blocked      bool      `json:"blocked"`
 	CreatedAt    time.Time `json:"created_at"`
 }
 

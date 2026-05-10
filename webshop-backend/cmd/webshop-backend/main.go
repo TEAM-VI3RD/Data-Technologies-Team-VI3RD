@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"webshop-backend/internal/db"
 	"webshop-backend/internal/handler"
+	"webshop-backend/internal/middleware"
 	"webshop-backend/internal/repository"
 
 	"github.com/gin-gonic/gin"
@@ -20,6 +21,7 @@ func main() {
 
 	userRepo := repository.NewUserRepository(db.DB)
 	authHandler := handler.NewAuthHandler(userRepo)
+	adminHandler := handler.NewAdminHandler(userRepo)
 
 	// 3. Configure the router.
 	router := gin.Default()
@@ -34,6 +36,16 @@ func main() {
 	{
 		auth.POST("/register", authHandler.Register)
 		auth.POST("/login", authHandler.Login)
+	}
+
+	// Admin routes — JWT required + is_admin = true.
+	admin := router.Group("/admin")
+	admin.Use(middleware.Auth(), middleware.AdminOnly())
+	{
+		admin.GET("/users", adminHandler.ListUsers)
+		admin.PUT("/users/:id/block", adminHandler.BlockUser)
+		admin.PUT("/users/:id/unblock", adminHandler.UnblockUser)
+		admin.DELETE("/users/:id", adminHandler.DeleteUser)
 	}
 
 	// Product routes.
