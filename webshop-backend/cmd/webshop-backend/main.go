@@ -102,14 +102,20 @@ func main() {
 		returns.GET("", returnHandler.ListMine)
 	}
 
-	// Product routes.
+	// Product routes — read access is public.
 	products := router.Group("/products")
 	{
 		products.GET("", productHandler.GetAll)
 		products.GET("/:id", productHandler.GetByID)
-		products.POST("", productHandler.Create)
-		products.PUT("/:id", productHandler.Update)
-		products.DELETE("/:id", productHandler.Delete)
+	}
+
+	// Product management — admin only (JWT + is_admin = true).
+	productsAdmin := router.Group("/products")
+	productsAdmin.Use(middleware.Auth(), middleware.AdminOnly())
+	{
+		productsAdmin.POST("", productHandler.Create)
+		productsAdmin.PUT("/:id", productHandler.Update)
+		productsAdmin.DELETE("/:id", productHandler.Delete)
 	}
 
 	// 4. Start HTTP server.
