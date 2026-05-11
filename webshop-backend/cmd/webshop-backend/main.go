@@ -23,6 +23,18 @@ func main() {
 	authHandler := handler.NewAuthHandler(userRepo)
 	adminHandler := handler.NewAdminHandler(userRepo)
 
+	cartRepo := repository.NewCartRepository(db.DB)
+	cartHandler := handler.NewCartHandler(cartRepo)
+
+	orderRepo := repository.NewOrderRepository(db.DB)
+	orderHandler := handler.NewOrderHandler(orderRepo)
+
+	addressRepo := repository.NewAddressRepository(db.DB)
+	addressHandler := handler.NewAddressHandler(addressRepo)
+
+	returnRepo := repository.NewReturnRepository(db.DB)
+	returnHandler := handler.NewReturnHandler(returnRepo)
+
 	// 3. Configure the router.
 	router := gin.Default()
 
@@ -46,6 +58,49 @@ func main() {
 		admin.PUT("/users/:id/block", adminHandler.BlockUser)
 		admin.PUT("/users/:id/unblock", adminHandler.UnblockUser)
 		admin.DELETE("/users/:id", adminHandler.DeleteUser)
+
+		admin.GET("/orders", orderHandler.ListAll)
+		admin.GET("/orders/:id", orderHandler.GetAny)
+		admin.PUT("/orders/:id/status", orderHandler.UpdateStatus)
+
+		admin.GET("/returns", returnHandler.ListAll)
+		admin.PUT("/returns/:id/status", returnHandler.UpdateStatus)
+	}
+
+	// Address routes — authenticated customers only.
+	addresses := router.Group("/addresses")
+	addresses.Use(middleware.Auth())
+	{
+		addresses.GET("", addressHandler.List)
+		addresses.POST("", addressHandler.Create)
+		addresses.DELETE("/:id", addressHandler.Delete)
+	}
+
+	// Cart routes — authenticated customers only.
+	cart := router.Group("/cart")
+	cart.Use(middleware.Auth())
+	{
+		cart.GET("", cartHandler.List)
+		cart.POST("", cartHandler.Add)
+		cart.PUT("/:product_id", cartHandler.Update)
+		cart.DELETE("/:product_id", cartHandler.Remove)
+	}
+
+	// Order routes — authenticated customers only.
+	orders := router.Group("/orders")
+	orders.Use(middleware.Auth())
+	{
+		orders.POST("", orderHandler.Place)
+		orders.GET("", orderHandler.ListMine)
+		orders.GET("/:id", orderHandler.GetMine)
+	}
+
+	// Return routes — authenticated customers only.
+	returns := router.Group("/returns")
+	returns.Use(middleware.Auth())
+	{
+		returns.POST("", returnHandler.Create)
+		returns.GET("", returnHandler.ListMine)
 	}
 
 	// Product routes.
