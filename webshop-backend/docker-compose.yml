@@ -21,6 +21,7 @@ services:
       - ./migrations/001_init.sql:/docker-entrypoint-initdb.d/001_init.sql
       - ./migrations/002_add_password_hash.sql:/docker-entrypoint-initdb.d/002_add_password_hash.sql
       - ./migrations/003_add_user_roles.sql:/docker-entrypoint-initdb.d/003_add_user_roles.sql
+      - ./migrations/004_remove_full_name.sql:/docker-entrypoint-initdb.d/004_remove_full_name.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
