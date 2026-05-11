@@ -16,7 +16,13 @@ func NewAddressHandler(repo *repository.AddressRepository) *AddressHandler {
 	return &AddressHandler{repo: repo}
 }
 
-// List returns all addresses for the authenticated user.
+// List godoc
+// @Summary     List my addresses
+// @Tags        addresses
+// @Produce     json
+// @Security    BearerAuth
+// @Success     200 {array}  models.Address
+// @Router      /addresses [get]
 func (h *AddressHandler) List(c *gin.Context) {
 	addrs, err := h.repo.ListForUser(userID(c))
 	if err != nil {
@@ -29,7 +35,16 @@ func (h *AddressHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, addrs)
 }
 
-// Create adds a new address for the authenticated user.
+// Create godoc
+// @Summary     Add an address
+// @Tags        addresses
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       body body     models.CreateAddressRequest true "Address data"
+// @Success     201  {object} models.Address
+// @Failure     400  {object} map[string]string
+// @Router      /addresses [post]
 func (h *AddressHandler) Create(c *gin.Context) {
 	var req models.CreateAddressRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -44,7 +59,14 @@ func (h *AddressHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, addr)
 }
 
-// Delete removes an address owned by the authenticated user.
+// Delete godoc
+// @Summary     Delete an address
+// @Tags        addresses
+// @Security    BearerAuth
+// @Param       id path int true "Address ID"
+// @Success     204
+// @Failure     404 {object} map[string]string
+// @Router      /addresses/{id} [delete]
 func (h *AddressHandler) Delete(c *gin.Context) {
 	id, err := parseID(c)
 	if err != nil {

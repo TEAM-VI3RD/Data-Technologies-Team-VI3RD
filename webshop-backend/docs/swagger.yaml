@@ -1,0 +1,810 @@
+basePath: /
+definitions:
+  models.AddToCartRequest:
+    properties:
+      product_id:
+        type: integer
+      quantity:
+        type: integer
+    required:
+    - product_id
+    - quantity
+    type: object
+  models.Address:
+    properties:
+      city:
+        type: string
+      country:
+        type: string
+      full_name:
+        type: string
+      house_number:
+        type: string
+      id:
+        type: integer
+      postal_code:
+        type: string
+      street:
+        type: string
+      type:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  models.AuthResponse:
+    properties:
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/models.User'
+    type: object
+  models.CartItem:
+    properties:
+      added_at:
+        type: string
+      cart_id:
+        type: integer
+      id:
+        type: integer
+      product_id:
+        type: integer
+      product_name:
+        type: string
+      quantity:
+        type: integer
+      subtotal:
+        type: number
+      unit_price:
+        type: number
+    type: object
+  models.CreateAddressRequest:
+    properties:
+      city:
+        type: string
+      country:
+        type: string
+      full_name:
+        type: string
+      house_number:
+        type: string
+      postal_code:
+        type: string
+      street:
+        type: string
+      type:
+        type: string
+    required:
+    - full_name
+    - street
+    - type
+    type: object
+  models.CreateProductRequest:
+    properties:
+      active:
+        type: boolean
+      category_ids:
+        items:
+          type: integer
+        type: array
+      description:
+        type: string
+      name:
+        type: string
+      price:
+        type: number
+      stock:
+        minimum: 0
+        type: integer
+    required:
+    - name
+    - price
+    type: object
+  models.CreateReturnRequest:
+    properties:
+      order_id:
+        type: integer
+      reason:
+        type: string
+    required:
+    - order_id
+    type: object
+  models.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  models.Product:
+    properties:
+      active:
+        type: boolean
+      category_ids:
+        items:
+          type: integer
+        type: array
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      price:
+        type: number
+      stock:
+        type: integer
+    type: object
+  models.RegisterRequest:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 8
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  models.Return:
+    properties:
+      id:
+        type: integer
+      order_id:
+        type: integer
+      reason:
+        type: string
+      requested_at:
+        type: string
+      resolved_at:
+        type: string
+      status:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  models.UpdateCartItemRequest:
+    properties:
+      quantity:
+        type: integer
+    required:
+    - quantity
+    type: object
+  models.UpdateProductRequest:
+    properties:
+      active:
+        type: boolean
+      category_ids:
+        items:
+          type: integer
+        type: array
+      description:
+        type: string
+      name:
+        type: string
+      price:
+        type: number
+      stock:
+        minimum: 0
+        type: integer
+    required:
+    - name
+    - price
+    type: object
+  models.UpdateReturnStatusRequest:
+    properties:
+      status:
+        enum:
+        - pending
+        - approved
+        - rejected
+        - completed
+        type: string
+    required:
+    - status
+    type: object
+  models.User:
+    properties:
+      blocked:
+        type: boolean
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      is_admin:
+        type: boolean
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: REST API voor de Data Technologies webshop (Go + PostgreSQL)
+  title: Webshop API
+  version: "1.0"
+paths:
+  /addresses:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Address'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List my addresses
+      tags:
+      - addresses
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Address data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateAddressRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Address'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Add an address
+      tags:
+      - addresses
+  /addresses/{id}:
+    delete:
+      parameters:
+      - description: Address ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete an address
+      tags:
+      - addresses
+  /admin/returns:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Return'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List all return requests (admin)
+      tags:
+      - admin
+  /admin/returns/{id}/status:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Return ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: New status
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateReturnStatusRequest'
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update return status (admin)
+      tags:
+      - admin
+  /admin/users:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.User'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List all users (admin)
+      tags:
+      - admin
+  /admin/users/{id}:
+    delete:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a user (admin)
+      tags:
+      - admin
+  /admin/users/{id}/block:
+    put:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Block a user (admin)
+      tags:
+      - admin
+  /admin/users/{id}/unblock:
+    put:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Unblock a user (admin)
+      tags:
+      - admin
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Email and password
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Email and password
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register a new user
+      tags:
+      - auth
+  /cart:
+    get:
+      description: Returns all items in the authenticated user's cart
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.CartItem'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get cart
+      tags:
+      - cart
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Product and quantity
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.AddToCartRequest'
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Add item to cart
+      tags:
+      - cart
+  /cart/{product_id}:
+    delete:
+      parameters:
+      - description: Product ID
+        in: path
+        name: product_id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Remove item from cart
+      tags:
+      - cart
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Product ID
+        in: path
+        name: product_id
+        required: true
+        type: integer
+      - description: New quantity
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateCartItemRequest'
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update cart item quantity
+      tags:
+      - cart
+  /products:
+    get:
+      description: Returns all products. Supports filtering via query params.
+      parameters:
+      - description: Search term
+        in: query
+        name: q
+        type: string
+      - description: Filter by category ID
+        in: query
+        name: category_id
+        type: integer
+      - description: Minimum price
+        in: query
+        name: min_price
+        type: number
+      - description: Maximum price
+        in: query
+        name: max_price
+        type: number
+      - description: 'Sort: new, price_asc, price_desc, popularity'
+        in: query
+        name: sort
+        type: string
+      - description: Max results
+        in: query
+        name: limit
+        type: integer
+      - description: Pagination offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Product'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List products
+      tags:
+      - products
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Product data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateProductRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Product'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a product
+      tags:
+      - products
+  /products/{id}:
+    delete:
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete a product
+      tags:
+      - products
+    get:
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Product'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get a product
+      tags:
+      - products
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Product data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateProductRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Product'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update a product
+      tags:
+      - products
+  /returns:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Return'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List my return requests
+      tags:
+      - returns
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Return data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateReturnRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Return'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Submit a return request
+      tags:
+      - returns
+securityDefinitions:
+  BearerAuth:
+    description: 'Voer in: Bearer {token}'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

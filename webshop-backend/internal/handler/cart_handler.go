@@ -25,7 +25,15 @@ func userID(c *gin.Context) int {
 	return id
 }
 
-// List returns the authenticated user's cart.
+// List godoc
+// @Summary     Get cart
+// @Description Returns all items in the authenticated user's cart
+// @Tags        cart
+// @Produce     json
+// @Security    BearerAuth
+// @Success     200 {array}  models.CartItem
+// @Failure     401 {object} map[string]string
+// @Router      /cart [get]
 func (h *CartHandler) List(c *gin.Context) {
 	items, err := h.repo.List(userID(c))
 	if err != nil {
@@ -38,7 +46,16 @@ func (h *CartHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, items)
 }
 
-// Add inserts or increments a cart item.
+// Add godoc
+// @Summary     Add item to cart
+// @Tags        cart
+// @Accept      json
+// @Security    BearerAuth
+// @Param       body body models.AddToCartRequest true "Product and quantity"
+// @Success     201
+// @Failure     400 {object} map[string]string
+// @Failure     409 {object} map[string]string
+// @Router      /cart [post]
 func (h *CartHandler) Add(c *gin.Context) {
 	var req models.AddToCartRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -56,7 +73,16 @@ func (h *CartHandler) Add(c *gin.Context) {
 	c.Status(http.StatusCreated)
 }
 
-// Update sets an absolute quantity for one cart row.
+// Update godoc
+// @Summary     Update cart item quantity
+// @Tags        cart
+// @Accept      json
+// @Security    BearerAuth
+// @Param       product_id path int                        true "Product ID"
+// @Param       body       body models.UpdateCartItemRequest true "New quantity"
+// @Success     204
+// @Failure     404 {object} map[string]string
+// @Router      /cart/{product_id} [put]
 func (h *CartHandler) Update(c *gin.Context) {
 	productID, err := strconv.Atoi(c.Param("product_id"))
 	if err != nil {
@@ -84,7 +110,14 @@ func (h *CartHandler) Update(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// Remove deletes one product from the cart.
+// Remove godoc
+// @Summary     Remove item from cart
+// @Tags        cart
+// @Security    BearerAuth
+// @Param       product_id path int true "Product ID"
+// @Success     204
+// @Failure     404 {object} map[string]string
+// @Router      /cart/{product_id} [delete]
 func (h *CartHandler) Remove(c *gin.Context) {
 	productID, err := strconv.Atoi(c.Param("product_id"))
 	if err != nil {

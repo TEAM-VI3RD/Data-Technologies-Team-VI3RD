@@ -17,7 +17,17 @@ func NewReturnHandler(repo *repository.ReturnRepository) *ReturnHandler {
 	return &ReturnHandler{repo: repo}
 }
 
-// Create submits a return request for an order owned by the authenticated user.
+// Create godoc
+// @Summary     Submit a return request
+// @Tags        returns
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       body body     models.CreateReturnRequest true "Return data"
+// @Success     201  {object} models.Return
+// @Failure     400  {object} map[string]string
+// @Failure     404  {object} map[string]string
+// @Router      /returns [post]
 func (h *ReturnHandler) Create(c *gin.Context) {
 	var req models.CreateReturnRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -36,7 +46,13 @@ func (h *ReturnHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, ret)
 }
 
-// ListMine returns the authenticated user's own return requests.
+// ListMine godoc
+// @Summary     List my return requests
+// @Tags        returns
+// @Produce     json
+// @Security    BearerAuth
+// @Success     200 {array}  models.Return
+// @Router      /returns [get]
 func (h *ReturnHandler) ListMine(c *gin.Context) {
 	returns, err := h.repo.ListForUser(userID(c))
 	if err != nil {
@@ -49,7 +65,13 @@ func (h *ReturnHandler) ListMine(c *gin.Context) {
 	c.JSON(http.StatusOK, returns)
 }
 
-// ListAll (admin) returns every return request.
+// ListAll godoc
+// @Summary     List all return requests (admin)
+// @Tags        admin
+// @Produce     json
+// @Security    BearerAuth
+// @Success     200 {array}  models.Return
+// @Router      /admin/returns [get]
 func (h *ReturnHandler) ListAll(c *gin.Context) {
 	returns, err := h.repo.ListAll()
 	if err != nil {
@@ -62,7 +84,16 @@ func (h *ReturnHandler) ListAll(c *gin.Context) {
 	c.JSON(http.StatusOK, returns)
 }
 
-// UpdateStatus (admin) updates the status of a return request.
+// UpdateStatus godoc
+// @Summary     Update return status (admin)
+// @Tags        admin
+// @Accept      json
+// @Security    BearerAuth
+// @Param       id   path int                                true "Return ID"
+// @Param       body body models.UpdateReturnStatusRequest   true "New status"
+// @Success     204
+// @Failure     404 {object} map[string]string
+// @Router      /admin/returns/{id}/status [put]
 func (h *ReturnHandler) UpdateStatus(c *gin.Context) {
 	id, err := parseID(c)
 	if err != nil {

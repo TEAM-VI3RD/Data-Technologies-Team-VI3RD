@@ -1,3 +1,12 @@
+// @title           Webshop API
+// @version         1.0
+// @description     REST API voor de Data Technologies webshop (Go + PostgreSQL)
+// @host            localhost:8080
+// @BasePath        /
+// @securityDefinitions.apikey BearerAuth
+// @in              header
+// @name            Authorization
+// @description     Voer in: Bearer {token}
 package main
 
 import (
@@ -7,8 +16,11 @@ import (
 	"webshop-backend/internal/handler"
 	"webshop-backend/internal/middleware"
 	"webshop-backend/internal/repository"
+	_ "webshop-backend/docs"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func main() {
@@ -26,9 +38,6 @@ func main() {
 	cartRepo := repository.NewCartRepository(db.DB)
 	cartHandler := handler.NewCartHandler(cartRepo)
 
-	orderRepo := repository.NewOrderRepository(db.DB)
-	orderHandler := handler.NewOrderHandler(orderRepo)
-
 	addressRepo := repository.NewAddressRepository(db.DB)
 	addressHandler := handler.NewAddressHandler(addressRepo)
 
@@ -38,7 +47,10 @@ func main() {
 	// 3. Configure the router.
 	router := gin.Default()
 
-	// Health check — useful for Docker/k8s readiness probes.
+	// Swagger UI — bereikbaar op http://localhost:8080/swagger/index.html
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	// Health check.
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
@@ -58,10 +70,6 @@ func main() {
 		admin.PUT("/users/:id/block", adminHandler.BlockUser)
 		admin.PUT("/users/:id/unblock", adminHandler.UnblockUser)
 		admin.DELETE("/users/:id", adminHandler.DeleteUser)
-
-		admin.GET("/orders", orderHandler.ListAll)
-		admin.GET("/orders/:id", orderHandler.GetAny)
-		admin.PUT("/orders/:id/status", orderHandler.UpdateStatus)
 
 		admin.GET("/returns", returnHandler.ListAll)
 		admin.PUT("/returns/:id/status", returnHandler.UpdateStatus)
@@ -84,15 +92,6 @@ func main() {
 		cart.POST("", cartHandler.Add)
 		cart.PUT("/:product_id", cartHandler.Update)
 		cart.DELETE("/:product_id", cartHandler.Remove)
-	}
-
-	// Order routes — authenticated customers only.
-	orders := router.Group("/orders")
-	orders.Use(middleware.Auth())
-	{
-		orders.POST("", orderHandler.Place)
-		orders.GET("", orderHandler.ListMine)
-		orders.GET("/:id", orderHandler.GetMine)
 	}
 
 	// Return routes — authenticated customers only.

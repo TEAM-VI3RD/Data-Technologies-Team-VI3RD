@@ -9,8 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ProductHandler wires HTTP concerns to the repository.
-// It has no SQL knowledge — that stays in the repository layer.
 type ProductHandler struct {
 	repo *repository.ProductRepository
 }
@@ -21,11 +19,18 @@ func NewProductHandler(repo *repository.ProductRepository) *ProductHandler {
 
 // GetAll godoc
 // @Summary     List products
-// @Description Returns all products ordered newest-first
+// @Description Returns all products. Supports filtering via query params.
 // @Tags        products
 // @Produce     json
+// @Param       q           query    string  false "Search term"
+// @Param       category_id query    int     false "Filter by category ID"
+// @Param       min_price   query    number  false "Minimum price"
+// @Param       max_price   query    number  false "Maximum price"
+// @Param       sort        query    string  false "Sort: new, price_asc, price_desc, popularity"
+// @Param       limit       query    int     false "Max results"
+// @Param       offset      query    int     false "Pagination offset"
 // @Success     200 {array}  models.Product
-// @Failure     500 {object} gin.H
+// @Failure     500 {object} map[string]string
 // @Router      /products [get]
 func (h *ProductHandler) GetAll(c *gin.Context) {
 	filter := repository.ProductFilter{
@@ -53,7 +58,6 @@ func (h *ProductHandler) GetAll(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	// Return an empty array, not null, when there are no products.
 	if products == nil {
 		products = []models.Product{}
 	}
@@ -62,21 +66,17 @@ func (h *ProductHandler) GetAll(c *gin.Context) {
 
 // GetByID godoc
 // @Summary     Get a product
-// @Description Returns one product by id
 // @Tags        products
 // @Produce     json
 // @Param       id  path     int true "Product ID"
 // @Success     200 {object} models.Product
-// @Failure     400 {object} gin.H
-// @Failure     404 {object} gin.H
-// @Failure     500 {object} gin.H
+// @Failure     404 {object} map[string]string
 // @Router      /products/{id} [get]
 func (h *ProductHandler) GetByID(c *gin.Context) {
 	id, err := parseID(c)
 	if err != nil {
 		return
 	}
-
 	p, err := h.repo.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -91,14 +91,12 @@ func (h *ProductHandler) GetByID(c *gin.Context) {
 
 // Create godoc
 // @Summary     Create a product
-// @Description Inserts a new product
 // @Tags        products
 // @Accept      json
 // @Produce     json
 // @Param       body body     models.CreateProductRequest true "Product data"
 // @Success     201  {object} models.Product
-// @Failure     400  {object} gin.H
-// @Failure     500  {object} gin.H
+// @Failure     400  {object} map[string]string
 // @Router      /products [post]
 func (h *ProductHandler) Create(c *gin.Context) {
 	var req models.CreateProductRequest
@@ -106,7 +104,6 @@ func (h *ProductHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
 	p, err := h.repo.Create(req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -117,29 +114,24 @@ func (h *ProductHandler) Create(c *gin.Context) {
 
 // Update godoc
 // @Summary     Update a product
-// @Description Replaces all fields of an existing product
 // @Tags        products
 // @Accept      json
 // @Produce     json
-// @Param       id   path     int true "Product ID"
+// @Param       id   path     int                        true "Product ID"
 // @Param       body body     models.UpdateProductRequest true "Product data"
 // @Success     200  {object} models.Product
-// @Failure     400  {object} gin.H
-// @Failure     404  {object} gin.H
-// @Failure     500  {object} gin.H
+// @Failure     404  {object} map[string]string
 // @Router      /products/{id} [put]
 func (h *ProductHandler) Update(c *gin.Context) {
 	id, err := parseID(c)
 	if err != nil {
 		return
 	}
-
 	var req models.UpdateProductRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
 	p, err := h.repo.Update(id, req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -154,20 +146,16 @@ func (h *ProductHandler) Update(c *gin.Context) {
 
 // Delete godoc
 // @Summary     Delete a product
-// @Description Removes a product by id
 // @Tags        products
 // @Param       id  path int true "Product ID"
 // @Success     204
-// @Failure     400 {object} gin.H
-// @Failure     404 {object} gin.H
-// @Failure     500 {object} gin.H
+// @Failure     404 {object} map[string]string
 // @Router      /products/{id} [delete]
 func (h *ProductHandler) Delete(c *gin.Context) {
 	id, err := parseID(c)
 	if err != nil {
 		return
 	}
-
 	found, err := h.repo.Delete(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

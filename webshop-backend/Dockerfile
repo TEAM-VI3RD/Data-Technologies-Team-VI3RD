@@ -9,9 +9,11 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy source and compile a statically-linked binary.
+# Copy source, generate swagger docs, then compile a statically-linked binary.
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o webshop-backend ./cmd/webshop-backend
+RUN go install github.com/swaggo/swag/cmd/swag@latest && \
+    swag init -g cmd/webshop-backend/main.go --output docs && \
+    CGO_ENABLED=0 GOOS=linux go build -o webshop-backend ./cmd/webshop-backend
 
 # =============================================================================
 # Stage 2 — Runtime

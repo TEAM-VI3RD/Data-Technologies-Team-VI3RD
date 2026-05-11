@@ -97,22 +97,15 @@ func (r *ProductRepository) Search(f ProductFilter) ([]models.Product, error) {
 		orderBy = "p.price ASC"
 	case "price_desc":
 		orderBy = "p.price DESC"
-	case "popularity":
-		orderBy = "popularity DESC, p.created_at DESC"
 	}
 
 	var sb strings.Builder
-	sb.WriteString(`
-		SELECT p.id, p.name, p.description, p.price, p.stock, p.active, p.created_at,
-		       COALESCE(SUM(oi.quantity), 0) AS popularity
-		FROM   products p
-		LEFT   JOIN order_items oi ON oi.product_id = p.id
-	`)
+	sb.WriteString(`SELECT p.id, p.name, p.description, p.price, p.stock, p.active, p.created_at FROM products p`)
 	if len(where) > 0 {
 		sb.WriteString(" WHERE ")
 		sb.WriteString(strings.Join(where, " AND "))
 	}
-	sb.WriteString(" GROUP BY p.id ORDER BY ")
+	sb.WriteString(" ORDER BY ")
 	sb.WriteString(orderBy)
 
 	if f.Limit > 0 {
@@ -133,9 +126,8 @@ func (r *ProductRepository) Search(f ProductFilter) ([]models.Product, error) {
 	var products []models.Product
 	for rows.Next() {
 		var p models.Product
-		var popularity int
 		if err := rows.Scan(
-			&p.ID, &p.Name, &p.Description, &p.Price, &p.Stock, &p.Active, &p.CreatedAt, &popularity,
+			&p.ID, &p.Name, &p.Description, &p.Price, &p.Stock, &p.Active, &p.CreatedAt,
 		); err != nil {
 			return nil, err
 		}

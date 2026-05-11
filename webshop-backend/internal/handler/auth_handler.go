@@ -20,6 +20,16 @@ func NewAuthHandler(repo *repository.UserRepository) *AuthHandler {
 	return &AuthHandler{repo: repo}
 }
 
+// Register godoc
+// @Summary     Register a new user
+// @Tags        auth
+// @Accept      json
+// @Produce     json
+// @Param       body body     models.RegisterRequest true "Email and password"
+// @Success     201  {object} models.AuthResponse
+// @Failure     400  {object} map[string]string
+// @Failure     409  {object} map[string]string
+// @Router      /auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req models.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -58,6 +68,17 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, models.AuthResponse{Token: token, User: *user})
 }
 
+// Login godoc
+// @Summary     Login
+// @Tags        auth
+// @Accept      json
+// @Produce     json
+// @Param       body body     models.LoginRequest true "Email and password"
+// @Success     200  {object} models.AuthResponse
+// @Failure     400  {object} map[string]string
+// @Failure     401  {object} map[string]string
+// @Failure     403  {object} map[string]string
+// @Router      /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req models.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -70,7 +91,6 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
 		return
 	}
-	// Same error for "not found" and "wrong password" to prevent email enumeration.
 	if user == nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
 		return
