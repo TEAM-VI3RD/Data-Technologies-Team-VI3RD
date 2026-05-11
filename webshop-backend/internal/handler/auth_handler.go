@@ -43,7 +43,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	user, err := h.repo.Create(req.Email, req.FullName, string(hash))
+	user, err := h.repo.Create(req.Email, string(hash))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
 		return
@@ -70,8 +70,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
 		return
 	}
-	// Return the same error for "user not found" and "wrong password" to prevent
-	// leaking which emails are registered (security best practice).
+	// Same error for "not found" and "wrong password" to prevent email enumeration.
 	if user == nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
 		return

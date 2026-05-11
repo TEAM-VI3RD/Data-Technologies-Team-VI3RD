@@ -13,15 +13,15 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-func (r *UserRepository) Create(email, fullName, passwordHash string) (*models.User, error) {
+func (r *UserRepository) Create(email, passwordHash string) (*models.User, error) {
 	const q = `
-		INSERT INTO users (email, full_name, password_hash)
-		VALUES ($1, $2, $3)
-		RETURNING id, email, full_name, is_admin, blocked, created_at`
+		INSERT INTO users (email, password_hash)
+		VALUES ($1, $2)
+		RETURNING id, email, is_admin, blocked, created_at`
 
 	var u models.User
-	err := r.db.QueryRow(q, email, fullName, passwordHash).Scan(
-		&u.ID, &u.Email, &u.FullName, &u.IsAdmin, &u.Blocked, &u.CreatedAt,
+	err := r.db.QueryRow(q, email, passwordHash).Scan(
+		&u.ID, &u.Email, &u.IsAdmin, &u.Blocked, &u.CreatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -33,13 +33,13 @@ func (r *UserRepository) Create(email, fullName, passwordHash string) (*models.U
 // Returns (nil, nil) when no user with that email exists.
 func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 	const q = `
-		SELECT id, email, full_name, password_hash, is_admin, blocked, created_at
+		SELECT id, email, password_hash, is_admin, blocked, created_at
 		FROM   users
 		WHERE  email = $1`
 
 	var u models.User
 	err := r.db.QueryRow(q, email).Scan(
-		&u.ID, &u.Email, &u.FullName, &u.PasswordHash, &u.IsAdmin, &u.Blocked, &u.CreatedAt,
+		&u.ID, &u.Email, &u.PasswordHash, &u.IsAdmin, &u.Blocked, &u.CreatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -52,7 +52,7 @@ func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 
 func (r *UserRepository) GetAll() ([]models.User, error) {
 	const q = `
-		SELECT id, email, full_name, is_admin, blocked, created_at
+		SELECT id, email, is_admin, blocked, created_at
 		FROM   users
 		ORDER  BY id ASC`
 
@@ -65,9 +65,7 @@ func (r *UserRepository) GetAll() ([]models.User, error) {
 	var users []models.User
 	for rows.Next() {
 		var u models.User
-		if err := rows.Scan(
-			&u.ID, &u.Email, &u.FullName, &u.IsAdmin, &u.Blocked, &u.CreatedAt,
-		); err != nil {
+		if err := rows.Scan(&u.ID, &u.Email, &u.IsAdmin, &u.Blocked, &u.CreatedAt); err != nil {
 			return nil, err
 		}
 		users = append(users, u)
@@ -78,13 +76,13 @@ func (r *UserRepository) GetAll() ([]models.User, error) {
 // GetByID returns (nil, nil) when the user does not exist.
 func (r *UserRepository) GetByID(id int) (*models.User, error) {
 	const q = `
-		SELECT id, email, full_name, is_admin, blocked, created_at
+		SELECT id, email, is_admin, blocked, created_at
 		FROM   users
 		WHERE  id = $1`
 
 	var u models.User
 	err := r.db.QueryRow(q, id).Scan(
-		&u.ID, &u.Email, &u.FullName, &u.IsAdmin, &u.Blocked, &u.CreatedAt,
+		&u.ID, &u.Email, &u.IsAdmin, &u.Blocked, &u.CreatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -102,11 +100,11 @@ func (r *UserRepository) SetBlocked(id int, blocked bool) (*models.User, error) 
 		UPDATE users
 		SET    blocked = $1
 		WHERE  id = $2
-		RETURNING id, email, full_name, is_admin, blocked, created_at`
+		RETURNING id, email, is_admin, blocked, created_at`
 
 	var u models.User
 	err := r.db.QueryRow(q, blocked, id).Scan(
-		&u.ID, &u.Email, &u.FullName, &u.IsAdmin, &u.Blocked, &u.CreatedAt,
+		&u.ID, &u.Email, &u.IsAdmin, &u.Blocked, &u.CreatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil

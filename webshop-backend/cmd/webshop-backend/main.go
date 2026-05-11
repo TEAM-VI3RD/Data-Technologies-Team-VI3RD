@@ -29,6 +29,12 @@ func main() {
 	orderRepo := repository.NewOrderRepository(db.DB)
 	orderHandler := handler.NewOrderHandler(orderRepo)
 
+	addressRepo := repository.NewAddressRepository(db.DB)
+	addressHandler := handler.NewAddressHandler(addressRepo)
+
+	returnRepo := repository.NewReturnRepository(db.DB)
+	returnHandler := handler.NewReturnHandler(returnRepo)
+
 	// 3. Configure the router.
 	router := gin.Default()
 
@@ -56,6 +62,18 @@ func main() {
 		admin.GET("/orders", orderHandler.ListAll)
 		admin.GET("/orders/:id", orderHandler.GetAny)
 		admin.PUT("/orders/:id/status", orderHandler.UpdateStatus)
+
+		admin.GET("/returns", returnHandler.ListAll)
+		admin.PUT("/returns/:id/status", returnHandler.UpdateStatus)
+	}
+
+	// Address routes — authenticated customers only.
+	addresses := router.Group("/addresses")
+	addresses.Use(middleware.Auth())
+	{
+		addresses.GET("", addressHandler.List)
+		addresses.POST("", addressHandler.Create)
+		addresses.DELETE("/:id", addressHandler.Delete)
 	}
 
 	// Cart routes — authenticated customers only.
@@ -75,6 +93,14 @@ func main() {
 		orders.POST("", orderHandler.Place)
 		orders.GET("", orderHandler.ListMine)
 		orders.GET("/:id", orderHandler.GetMine)
+	}
+
+	// Return routes — authenticated customers only.
+	returns := router.Group("/returns")
+	returns.Use(middleware.Auth())
+	{
+		returns.POST("", returnHandler.Create)
+		returns.GET("", returnHandler.ListMine)
 	}
 
 	// Product routes.

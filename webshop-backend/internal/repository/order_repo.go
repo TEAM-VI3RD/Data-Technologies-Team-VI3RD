@@ -14,35 +14,38 @@ func NewOrderRepository(db *sql.DB) *OrderRepository {
 	return &OrderRepository{db: db}
 }
 
-// ErrEmptyCart is returned when a user tries to place an order with no cart items.
 var ErrEmptyCart = errors.New("cart is empty")
 
-// PlaceOrder turns the user's cart into an order atomically:
-//
-//   - Locks the product rows (FOR UPDATE) to prevent oversell under concurrency.
-//   - Verifies stock for every line.
-//   - Snapshots the unit_price into order_items (preserves history).
-//   - Decrements product stock.
-//   - Clears the cart.
-//
-// Returns the new order id.
-func (r *OrderRepository) PlaceOrder(userID int) (int, error) {
+// PlaceOrder turns the user's cart into an order atomically.
+// Locks product rows (FOR UPDATE), checks stock, snapshots prices,
+// stores total_amount, decrements stock, and clears the cart.
+func (r *OrderRepository) PlaceOrder(userID int, req models.PlaceOrderRequest) (int, error) {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return 0, err
 	}
 	defer tx.Rollback()
 
-	// Lock products referenced by the cart, in id order to avoid deadlocks.
+	// Find the user's cart.
+	var cartID int
+	err = tx.QueryRow(`SELECT id FROM cart WHERE user_id = $1`, userID).Scan(&cartID)
+	if err == sql.ErrNoRows {
+		return 0, ErrEmptyCart
+	}
+	if err != nil {
+		return 0, err
+	}
+
+	// Lock products referenced by the cart in id order to avoid deadlocks.
 	const lockQ = `
 		SELECT p.id, p.price, p.stock, ci.quantity
 		FROM   cart_items ci
 		JOIN   products   p ON p.id = ci.product_id
-		WHERE  ci.user_id = $1
+		WHERE  ci.cart_id = $1
 		ORDER  BY p.id
 		FOR    UPDATE OF p`
 
-	rows, err := tx.Query(lockQ, userID)
+	rows, err := tx.Query(lockQ, cartID)
 	if err != nil {
 		return 0, err
 	}
@@ -74,9 +77,18 @@ func (r *OrderRepository) PlaceOrder(userID int) (int, error) {
 		}
 	}
 
+	// Calculate total.
+	var total float64
+	for _, l := range lines {
+		total += float64(l.qty) * l.price
+	}
+
 	var orderID int
-	err = tx.QueryRow(
-		`INSERT INTO orders (user_id) VALUES ($1) RETURNING id`, userID,
+	err = tx.QueryRow(`
+		INSERT INTO orders (user_id, total_amount, shipping_address_id, billing_address_id)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id`,
+		userID, total, req.ShippingAddressID, req.BillingAddressID,
 	).Scan(&orderID)
 	if err != nil {
 		return 0, err
@@ -96,7 +108,8 @@ func (r *OrderRepository) PlaceOrder(userID int) (int, error) {
 		}
 	}
 
-	if _, err := tx.Exec(`DELETE FROM cart_items WHERE user_id = $1`, userID); err != nil {
+	// Clear the cart items (keep the cart row itself).
+	if _, err := tx.Exec(`DELETE FROM cart_items WHERE cart_id = $1`, cartID); err != nil {
 		return 0, err
 	}
 
@@ -106,15 +119,13 @@ func (r *OrderRepository) PlaceOrder(userID int) (int, error) {
 	return orderID, nil
 }
 
-// ListForUser returns the user's own orders, newest first, with totals.
+// ListForUser returns the user's own orders, newest first.
 func (r *OrderRepository) ListForUser(userID int) ([]models.Order, error) {
 	const q = `
-		SELECT o.id, o.user_id, o.status, o.created_at,
-		       COALESCE(SUM(oi.quantity * oi.unit_price), 0) AS total
+		SELECT o.id, o.user_id, o.status, o.order_date, o.total_amount,
+		       o.shipping_address_id, o.billing_address_id, o.created_at
 		FROM   orders o
-		LEFT   JOIN order_items oi ON oi.order_id = o.id
 		WHERE  o.user_id = $1
-		GROUP  BY o.id
 		ORDER  BY o.created_at DESC`
 	return r.scanOrders(q, userID)
 }
@@ -122,11 +133,9 @@ func (r *OrderRepository) ListForUser(userID int) ([]models.Order, error) {
 // ListAll returns every order in the system (admin).
 func (r *OrderRepository) ListAll() ([]models.Order, error) {
 	const q = `
-		SELECT o.id, o.user_id, o.status, o.created_at,
-		       COALESCE(SUM(oi.quantity * oi.unit_price), 0) AS total
+		SELECT o.id, o.user_id, o.status, o.order_date, o.total_amount,
+		       o.shipping_address_id, o.billing_address_id, o.created_at
 		FROM   orders o
-		LEFT   JOIN order_items oi ON oi.order_id = o.id
-		GROUP  BY o.id
 		ORDER  BY o.created_at DESC`
 	return r.scanOrders(q)
 }
@@ -134,21 +143,21 @@ func (r *OrderRepository) ListAll() ([]models.Order, error) {
 // GetByID returns an order with its items. ownerID > 0 enforces ownership.
 func (r *OrderRepository) GetByID(orderID, ownerID int) (*models.Order, error) {
 	var o models.Order
-	var args []any
 	q := `
-		SELECT o.id, o.user_id, o.status, o.created_at,
-		       COALESCE(SUM(oi.quantity * oi.unit_price), 0) AS total
+		SELECT o.id, o.user_id, o.status, o.order_date, o.total_amount,
+		       o.shipping_address_id, o.billing_address_id, o.created_at
 		FROM   orders o
-		LEFT   JOIN order_items oi ON oi.order_id = o.id
 		WHERE  o.id = $1`
-	args = append(args, orderID)
+	args := []any{orderID}
 	if ownerID > 0 {
 		q += ` AND o.user_id = $2`
 		args = append(args, ownerID)
 	}
-	q += ` GROUP BY o.id`
 
-	err := r.db.QueryRow(q, args...).Scan(&o.ID, &o.UserID, &o.Status, &o.CreatedAt, &o.Total)
+	err := r.db.QueryRow(q, args...).Scan(
+		&o.ID, &o.UserID, &o.Status, &o.OrderDate, &o.TotalAmount,
+		&o.ShippingAddressID, &o.BillingAddressID, &o.CreatedAt,
+	)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -179,7 +188,6 @@ func (r *OrderRepository) GetByID(orderID, ownerID int) (*models.Order, error) {
 }
 
 // UpdateStatus changes the status of an order (admin only).
-// Returns (false, nil) when no row matched.
 func (r *OrderRepository) UpdateStatus(orderID int, status string) (bool, error) {
 	res, err := r.db.Exec(
 		`UPDATE orders SET status = $1 WHERE id = $2`, status, orderID,
@@ -191,7 +199,6 @@ func (r *OrderRepository) UpdateStatus(orderID int, status string) (bool, error)
 	return n > 0, nil
 }
 
-// scanOrders runs an "order list" query (5 columns) and returns the slice.
 func (r *OrderRepository) scanOrders(q string, args ...any) ([]models.Order, error) {
 	rows, err := r.db.Query(q, args...)
 	if err != nil {
@@ -202,7 +209,10 @@ func (r *OrderRepository) scanOrders(q string, args ...any) ([]models.Order, err
 	var orders []models.Order
 	for rows.Next() {
 		var o models.Order
-		if err := rows.Scan(&o.ID, &o.UserID, &o.Status, &o.CreatedAt, &o.Total); err != nil {
+		if err := rows.Scan(
+			&o.ID, &o.UserID, &o.Status, &o.OrderDate, &o.TotalAmount,
+			&o.ShippingAddressID, &o.BillingAddressID, &o.CreatedAt,
+		); err != nil {
 			return nil, err
 		}
 		orders = append(orders, o)

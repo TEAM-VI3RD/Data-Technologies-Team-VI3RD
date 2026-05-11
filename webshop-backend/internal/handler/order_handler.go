@@ -20,8 +20,12 @@ func NewOrderHandler(repo *repository.OrderRepository) *OrderHandler {
 
 // Place turns the authenticated user's cart into a new order.
 func (h *OrderHandler) Place(c *gin.Context) {
+	var req models.PlaceOrderRequest
+	// Body is optional — ignore bind errors (no required fields).
+	_ = c.ShouldBindJSON(&req)
+
 	uid := userID(c)
-	id, err := h.repo.PlaceOrder(uid)
+	id, err := h.repo.PlaceOrder(uid, req)
 	if err != nil {
 		switch {
 		case errors.Is(err, repository.ErrEmptyCart):

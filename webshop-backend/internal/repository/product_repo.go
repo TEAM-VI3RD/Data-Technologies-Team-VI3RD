@@ -15,12 +15,11 @@ type ProductFilter struct {
 	MinPrice   float64 // 0 = no lower bound
 	MaxPrice   float64 // 0 = no upper bound
 	Sort       string  // "new" (default), "price_asc", "price_desc", "popularity"
+	ActiveOnly bool    // true = only active products
 	Limit      int     // 0 = no limit
 	Offset     int
 }
 
-// ProductRepository executes raw SQL against the products table.
-// It receives a *sql.DB via the constructor — never creates its own connection.
 type ProductRepository struct {
 	db *sql.DB
 }
@@ -29,10 +28,10 @@ func NewProductRepository(db *sql.DB) *ProductRepository {
 	return &ProductRepository{db: db}
 }
 
-// GetAll returns every product ordered newest-first.
+// GetAll returns every product ordered newest-first with their category IDs.
 func (r *ProductRepository) GetAll() ([]models.Product, error) {
 	const q = `
-		SELECT id, category_id, name, description, price, stock, created_at
+		SELECT id, name, description, price, stock, active, created_at
 		FROM   products
 		ORDER  BY created_at DESC`
 
@@ -46,20 +45,19 @@ func (r *ProductRepository) GetAll() ([]models.Product, error) {
 	for rows.Next() {
 		var p models.Product
 		if err := rows.Scan(
-			&p.ID, &p.CategoryID, &p.Name, &p.Description,
-			&p.Price, &p.Stock, &p.CreatedAt,
+			&p.ID, &p.Name, &p.Description, &p.Price, &p.Stock, &p.Active, &p.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
 		products = append(products, p)
 	}
-	// rows.Err() catches any error that occurred during iteration.
-	return products, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return r.loadCategoryIDs(products)
 }
 
 // Search returns products matching the given filter.
-// SQL is composed from whitelisted fragments — never from raw user input —
-// and every value travels as a parameter to prevent SQL injection.
 func (r *ProductRepository) Search(f ProductFilter) ([]models.Product, error) {
 	var (
 		where []string
@@ -76,7 +74,10 @@ func (r *ProductRepository) Search(f ProductFilter) ([]models.Product, error) {
 	}
 	if f.CategoryID > 0 {
 		args = append(args, f.CategoryID)
-		where = append(where, fmt.Sprintf("p.category_id = $%d", len(args)))
+		where = append(where, fmt.Sprintf(
+			"EXISTS (SELECT 1 FROM product_categories pc WHERE pc.product_id = p.id AND pc.category_id = $%d)",
+			len(args),
+		))
 	}
 	if f.MinPrice > 0 {
 		args = append(args, f.MinPrice)
@@ -85,6 +86,9 @@ func (r *ProductRepository) Search(f ProductFilter) ([]models.Product, error) {
 	if f.MaxPrice > 0 {
 		args = append(args, f.MaxPrice)
 		where = append(where, fmt.Sprintf("p.price <= $%d", len(args)))
+	}
+	if f.ActiveOnly {
+		where = append(where, "p.active = true")
 	}
 
 	orderBy := "p.created_at DESC"
@@ -99,7 +103,7 @@ func (r *ProductRepository) Search(f ProductFilter) ([]models.Product, error) {
 
 	var sb strings.Builder
 	sb.WriteString(`
-		SELECT p.id, p.category_id, p.name, p.description, p.price, p.stock, p.created_at,
+		SELECT p.id, p.name, p.description, p.price, p.stock, p.active, p.created_at,
 		       COALESCE(SUM(oi.quantity), 0) AS popularity
 		FROM   products p
 		LEFT   JOIN order_items oi ON oi.product_id = p.id
@@ -131,27 +135,28 @@ func (r *ProductRepository) Search(f ProductFilter) ([]models.Product, error) {
 		var p models.Product
 		var popularity int
 		if err := rows.Scan(
-			&p.ID, &p.CategoryID, &p.Name, &p.Description,
-			&p.Price, &p.Stock, &p.CreatedAt, &popularity,
+			&p.ID, &p.Name, &p.Description, &p.Price, &p.Stock, &p.Active, &p.CreatedAt, &popularity,
 		); err != nil {
 			return nil, err
 		}
 		products = append(products, p)
 	}
-	return products, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return r.loadCategoryIDs(products)
 }
 
 // GetByID returns a single product or (nil, nil) when not found.
 func (r *ProductRepository) GetByID(id int) (*models.Product, error) {
 	const q = `
-		SELECT id, category_id, name, description, price, stock, created_at
+		SELECT id, name, description, price, stock, active, created_at
 		FROM   products
 		WHERE  id = $1`
 
 	var p models.Product
 	err := r.db.QueryRow(q, id).Scan(
-		&p.ID, &p.CategoryID, &p.Name, &p.Description,
-		&p.Price, &p.Stock, &p.CreatedAt,
+		&p.ID, &p.Name, &p.Description, &p.Price, &p.Stock, &p.Active, &p.CreatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -159,49 +164,66 @@ func (r *ProductRepository) GetByID(id int) (*models.Product, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &p, nil
+	products, err := r.loadCategoryIDs([]models.Product{p})
+	if err != nil {
+		return nil, err
+	}
+	return &products[0], nil
 }
 
-// Create inserts a new product and returns the full row via RETURNING.
-// RETURNING avoids a second SELECT and is idiomatic in PostgreSQL.
+// Create inserts a new product and assigns its categories.
 func (r *ProductRepository) Create(req models.CreateProductRequest) (*models.Product, error) {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
 	const q = `
-		INSERT INTO products (category_id, name, description, price, stock)
+		INSERT INTO products (name, description, price, stock, active)
 		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, category_id, name, description, price, stock, created_at`
+		RETURNING id, name, description, price, stock, active, created_at`
 
 	var p models.Product
-	err := r.db.QueryRow(q,
-		req.CategoryID, req.Name, req.Description, req.Price, req.Stock,
-	).Scan(
-		&p.ID, &p.CategoryID, &p.Name, &p.Description,
-		&p.Price, &p.Stock, &p.CreatedAt,
+	err = tx.QueryRow(q, req.Name, req.Description, req.Price, req.Stock, req.Active).Scan(
+		&p.ID, &p.Name, &p.Description, &p.Price, &p.Stock, &p.Active, &p.CreatedAt,
 	)
 	if err != nil {
 		return nil, err
 	}
+
+	if err := insertCategories(tx, p.ID, req.CategoryIDs); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	p.CategoryIDs = req.CategoryIDs
 	return &p, nil
 }
 
-// Update replaces all mutable fields and returns the updated row.
+// Update replaces all mutable fields and resets categories.
 // Returns (nil, nil) if the id does not exist.
 func (r *ProductRepository) Update(id int, req models.UpdateProductRequest) (*models.Product, error) {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
 	const q = `
 		UPDATE products
-		SET    category_id = $1,
-		       name        = $2,
-		       description = $3,
-		       price       = $4,
-		       stock       = $5
+		SET    name        = $1,
+		       description = $2,
+		       price       = $3,
+		       stock       = $4,
+		       active      = $5
 		WHERE  id = $6
-		RETURNING id, category_id, name, description, price, stock, created_at`
+		RETURNING id, name, description, price, stock, active, created_at`
 
 	var p models.Product
-	err := r.db.QueryRow(q,
-		req.CategoryID, req.Name, req.Description, req.Price, req.Stock, id,
-	).Scan(
-		&p.ID, &p.CategoryID, &p.Name, &p.Description,
-		&p.Price, &p.Stock, &p.CreatedAt,
+	err = tx.QueryRow(q, req.Name, req.Description, req.Price, req.Stock, req.Active, id).Scan(
+		&p.ID, &p.Name, &p.Description, &p.Price, &p.Stock, &p.Active, &p.CreatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -209,18 +231,74 @@ func (r *ProductRepository) Update(id int, req models.UpdateProductRequest) (*mo
 	if err != nil {
 		return nil, err
 	}
+
+	if _, err := tx.Exec(`DELETE FROM product_categories WHERE product_id = $1`, id); err != nil {
+		return nil, err
+	}
+	if err := insertCategories(tx, p.ID, req.CategoryIDs); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	p.CategoryIDs = req.CategoryIDs
 	return &p, nil
 }
 
 // Delete removes a product by id.
-// Returns (false, nil) when no row matched — caller decides the HTTP status.
 func (r *ProductRepository) Delete(id int) (bool, error) {
-	const q = `DELETE FROM products WHERE id = $1`
-
-	result, err := r.db.Exec(q, id)
+	result, err := r.db.Exec(`DELETE FROM products WHERE id = $1`, id)
 	if err != nil {
 		return false, err
 	}
 	n, _ := result.RowsAffected()
 	return n > 0, nil
+}
+
+// loadCategoryIDs fetches category_ids for a slice of products in one query.
+func (r *ProductRepository) loadCategoryIDs(products []models.Product) ([]models.Product, error) {
+	if len(products) == 0 {
+		return products, nil
+	}
+
+	ids := make([]any, len(products))
+	placeholders := make([]string, len(products))
+	index := make(map[int]int) // product_id → slice index
+	for i, p := range products {
+		ids[i] = p.ID
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		index[p.ID] = i
+	}
+
+	q := fmt.Sprintf(
+		`SELECT product_id, category_id FROM product_categories WHERE product_id IN (%s)`,
+		strings.Join(placeholders, ","),
+	)
+	rows, err := r.db.Query(q, ids...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var pid, cid int
+		if err := rows.Scan(&pid, &cid); err != nil {
+			return nil, err
+		}
+		i := index[pid]
+		products[i].CategoryIDs = append(products[i].CategoryIDs, cid)
+	}
+	return products, rows.Err()
+}
+
+func insertCategories(tx *sql.Tx, productID int, categoryIDs []int) error {
+	for _, cid := range categoryIDs {
+		if _, err := tx.Exec(
+			`INSERT INTO product_categories (product_id, category_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+			productID, cid,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
 }

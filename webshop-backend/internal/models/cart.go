@@ -2,16 +2,21 @@ package models
 
 import "time"
 
-// CartItem mirrors the cart_items table, enriched with product info for display.
+type Cart struct {
+	ID        int       `json:"id"`
+	UserID    int       `json:"user_id"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type CartItem struct {
 	ID          int       `json:"id"`
-	UserID      int       `json:"user_id"`
+	CartID      int       `json:"cart_id"`
 	ProductID   int       `json:"product_id"`
 	ProductName string    `json:"product_name"`
 	UnitPrice   float64   `json:"unit_price"`
 	Quantity    int       `json:"quantity"`
 	Subtotal    float64   `json:"subtotal"`
-	CreatedAt   time.Time `json:"created_at"`
+	AddedAt     time.Time `json:"added_at"`
 }
 
 type AddToCartRequest struct {
