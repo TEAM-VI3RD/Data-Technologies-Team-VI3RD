@@ -28,7 +28,27 @@ func NewProductHandler(repo *repository.ProductRepository) *ProductHandler {
 // @Failure     500 {object} gin.H
 // @Router      /products [get]
 func (h *ProductHandler) GetAll(c *gin.Context) {
-	products, err := h.repo.GetAll()
+	filter := repository.ProductFilter{
+		Query: c.Query("q"),
+		Sort:  c.Query("sort"),
+	}
+	if v, err := strconv.Atoi(c.Query("category_id")); err == nil {
+		filter.CategoryID = v
+	}
+	if v, err := strconv.ParseFloat(c.Query("min_price"), 64); err == nil {
+		filter.MinPrice = v
+	}
+	if v, err := strconv.ParseFloat(c.Query("max_price"), 64); err == nil {
+		filter.MaxPrice = v
+	}
+	if v, err := strconv.Atoi(c.Query("limit")); err == nil {
+		filter.Limit = v
+	}
+	if v, err := strconv.Atoi(c.Query("offset")); err == nil {
+		filter.Offset = v
+	}
+
+	products, err := h.repo.Search(filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

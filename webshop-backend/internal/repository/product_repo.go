@@ -2,8 +2,22 @@ package repository
 
 import (
 	"database/sql"
+	"fmt"
+	"strings"
 	"webshop-backend/internal/models"
 )
+
+// ProductFilter is the search/filter input for Search.
+// All fields are optional; zero values mean "no filter".
+type ProductFilter struct {
+	Query      string  // free-text match on name/description
+	CategoryID int     // 0 = any
+	MinPrice   float64 // 0 = no lower bound
+	MaxPrice   float64 // 0 = no upper bound
+	Sort       string  // "new" (default), "price_asc", "price_desc", "popularity"
+	Limit      int     // 0 = no limit
+	Offset     int
+}
 
 // ProductRepository executes raw SQL against the products table.
 // It receives a *sql.DB via the constructor — never creates its own connection.
@@ -40,6 +54,90 @@ func (r *ProductRepository) GetAll() ([]models.Product, error) {
 		products = append(products, p)
 	}
 	// rows.Err() catches any error that occurred during iteration.
+	return products, rows.Err()
+}
+
+// Search returns products matching the given filter.
+// SQL is composed from whitelisted fragments — never from raw user input —
+// and every value travels as a parameter to prevent SQL injection.
+func (r *ProductRepository) Search(f ProductFilter) ([]models.Product, error) {
+	var (
+		where []string
+		args  []any
+	)
+
+	if f.Query != "" {
+		args = append(args, f.Query)
+		ph := len(args)
+		where = append(where, fmt.Sprintf(
+			"(p.name ILIKE '%%' || $%d || '%%' OR p.description ILIKE '%%' || $%d || '%%')",
+			ph, ph,
+		))
+	}
+	if f.CategoryID > 0 {
+		args = append(args, f.CategoryID)
+		where = append(where, fmt.Sprintf("p.category_id = $%d", len(args)))
+	}
+	if f.MinPrice > 0 {
+		args = append(args, f.MinPrice)
+		where = append(where, fmt.Sprintf("p.price >= $%d", len(args)))
+	}
+	if f.MaxPrice > 0 {
+		args = append(args, f.MaxPrice)
+		where = append(where, fmt.Sprintf("p.price <= $%d", len(args)))
+	}
+
+	orderBy := "p.created_at DESC"
+	switch f.Sort {
+	case "price_asc":
+		orderBy = "p.price ASC"
+	case "price_desc":
+		orderBy = "p.price DESC"
+	case "popularity":
+		orderBy = "popularity DESC, p.created_at DESC"
+	}
+
+	var sb strings.Builder
+	sb.WriteString(`
+		SELECT p.id, p.category_id, p.name, p.description, p.price, p.stock, p.created_at,
+		       COALESCE(SUM(oi.quantity), 0) AS popularity
+		FROM   products p
+		LEFT   JOIN order_items oi ON oi.product_id = p.id
+	`)
+	if len(where) > 0 {
+		sb.WriteString(" WHERE ")
+		sb.WriteString(strings.Join(where, " AND "))
+	}
+	sb.WriteString(" GROUP BY p.id ORDER BY ")
+	sb.WriteString(orderBy)
+
+	if f.Limit > 0 {
+		args = append(args, f.Limit)
+		sb.WriteString(fmt.Sprintf(" LIMIT $%d", len(args)))
+	}
+	if f.Offset > 0 {
+		args = append(args, f.Offset)
+		sb.WriteString(fmt.Sprintf(" OFFSET $%d", len(args)))
+	}
+
+	rows, err := r.db.Query(sb.String(), args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var products []models.Product
+	for rows.Next() {
+		var p models.Product
+		var popularity int
+		if err := rows.Scan(
+			&p.ID, &p.CategoryID, &p.Name, &p.Description,
+			&p.Price, &p.Stock, &p.CreatedAt, &popularity,
+		); err != nil {
+			return nil, err
+		}
+		products = append(products, p)
+	}
 	return products, rows.Err()
 }
 
