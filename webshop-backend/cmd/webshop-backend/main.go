@@ -12,11 +12,11 @@ package main
 import (
 	"log"
 	"net/http"
+	_ "webshop-backend/docs"
 	"webshop-backend/internal/db"
 	"webshop-backend/internal/handler"
 	"webshop-backend/internal/middleware"
 	"webshop-backend/internal/repository"
-	_ "webshop-backend/docs"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -40,6 +40,9 @@ func main() {
 
 	addressRepo := repository.NewAddressRepository(db.DB)
 	addressHandler := handler.NewAddressHandler(addressRepo)
+
+	orderRepo := repository.NewOrderRepository(db.DB)
+	orderHandler := handler.NewOrderHandler(orderRepo)
 
 	returnRepo := repository.NewReturnRepository(db.DB)
 	returnHandler := handler.NewReturnHandler(returnRepo)
@@ -73,6 +76,10 @@ func main() {
 
 		admin.GET("/returns", returnHandler.ListAll)
 		admin.PUT("/returns/:id/status", returnHandler.UpdateStatus)
+
+		admin.GET("/orders", orderHandler.ListAll)
+		admin.GET("/orders/:id", orderHandler.GetAny)
+		admin.PUT("/orders/:id/status", orderHandler.UpdateStatus)
 	}
 
 	// Address routes — authenticated customers only.
@@ -100,6 +107,15 @@ func main() {
 	{
 		returns.POST("", returnHandler.Create)
 		returns.GET("", returnHandler.ListMine)
+	}
+
+	// Order routes — authenticated customers only.
+	orders := router.Group("/orders")
+	orders.Use(middleware.Auth())
+	{
+		orders.POST("", orderHandler.Place)
+		orders.GET("", orderHandler.ListMine)
+		orders.GET("/:id", orderHandler.GetMine)
 	}
 
 	// Product routes — read access is public.

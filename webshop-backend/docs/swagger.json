@@ -35,6 +35,244 @@
                     }
                 }
             },
+            "/orders": {
+                "post": {
+                    "security": [
+                        {
+                            "BearerAuth": []
+                        }
+                    ],
+                    "consumes": [
+                        "application/json"
+                    ],
+                    "produces": [
+                        "application/json"
+                    ],
+                    "tags": [
+                        "orders"
+                    ],
+                    "summary": "Place an order from the authenticated user's cart",
+                    "parameters": [
+                        {
+                            "description": "Order data",
+                            "name": "body",
+                            "in": "body",
+                            "required": false,
+                            "schema": {
+                                "$ref": "#/definitions/models.PlaceOrderRequest"
+                            }
+                        }
+                    ],
+                    "responses": {
+                        "201": {
+                            "description": "Created",
+                            "schema": {
+                                "$ref": "#/definitions/models.Order"
+                            }
+                        },
+                        "400": {
+                            "description": "Bad Request",
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "409": {
+                            "description": "Conflict",
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "get": {
+                    "security": [
+                        {
+                            "BearerAuth": []
+                        }
+                    ],
+                    "produces": [
+                        "application/json"
+                    ],
+                    "tags": [
+                        "orders"
+                    ],
+                    "summary": "List my orders",
+                    "responses": {
+                        "200": {
+                            "description": "OK",
+                            "schema": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/models.Order"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/orders/{id}": {
+                "get": {
+                    "security": [
+                        {
+                            "BearerAuth": []
+                        }
+                    ],
+                    "produces": [
+                        "application/json"
+                    ],
+                    "tags": [
+                        "orders"
+                    ],
+                    "summary": "Get my order by ID",
+                    "parameters": [
+                        {
+                            "type": "integer",
+                            "description": "Order ID",
+                            "name": "id",
+                            "in": "path",
+                            "required": true
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "OK",
+                            "schema": {
+                                "$ref": "#/definitions/models.Order"
+                            }
+                        },
+                        "404": {
+                            "description": "Not Found",
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/admin/orders": {
+                "get": {
+                    "security": [
+                        {
+                            "BearerAuth": []
+                        }
+                    ],
+                    "produces": [
+                        "application/json"
+                    ],
+                    "tags": [
+                        "admin"
+                    ],
+                    "summary": "List all orders (admin)",
+                    "responses": {
+                        "200": {
+                            "description": "OK",
+                            "schema": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/models.Order"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/admin/orders/{id}": {
+                "get": {
+                    "security": [
+                        {
+                            "BearerAuth": []
+                        }
+                    ],
+                    "produces": [
+                        "application/json"
+                    ],
+                    "tags": [
+                        "admin"
+                    ],
+                    "summary": "Get any order by ID (admin)",
+                    "parameters": [
+                        {
+                            "type": "integer",
+                            "description": "Order ID",
+                            "name": "id",
+                            "in": "path",
+                            "required": true
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "OK",
+                            "schema": {
+                                "$ref": "#/definitions/models.Order"
+                            }
+                        },
+                        "404": {
+                            "description": "Not Found",
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "put": {
+                    "security": [
+                        {
+                            "BearerAuth": []
+                        }
+                    ],
+                    "consumes": [
+                        "application/json"
+                    ],
+                    "tags": [
+                        "admin"
+                    ],
+                    "summary": "Update order status (admin)",
+                    "parameters": [
+                        {
+                            "type": "integer",
+                            "description": "Order ID",
+                            "name": "id",
+                            "in": "path",
+                            "required": true
+                        },
+                        {
+                            "description": "New status",
+                            "name": "body",
+                            "in": "body",
+                            "required": true,
+                            "schema": {
+                                "$ref": "#/definitions/models.UpdateOrderStatusRequest"
+                            }
+                        }
+                    ],
+                    "responses": {
+                        "204": {
+                            "description": "No Content"
+                        },
+                        "404": {
+                            "description": "Not Found",
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -923,6 +1161,93 @@
         }
     },
     "definitions": {
+        "models.OrderItem": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "product_id": {
+                    "type": "integer"
+                },
+                "product_name": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "unit_price": {
+                    "type": "number"
+                },
+                "subtotal": {
+                    "type": "number"
+                }
+            }
+        },
+        "models.Order": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "order_date": {
+                    "type": "string"
+                },
+                "total_amount": {
+                    "type": "number"
+                },
+                "shipping_address_id": {
+                    "type": "integer"
+                },
+                "billing_address_id": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.OrderItem"
+                    }
+                }
+            }
+        },
+        "models.PlaceOrderRequest": {
+            "type": "object",
+            "properties": {
+                "shipping_address_id": {
+                    "type": "integer"
+                },
+                "billing_address_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.UpdateOrderStatusRequest": {
+            "type": "object",
+            "required": [
+                "status"
+            ],
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "pending",
+                        "confirmed",
+                        "shipped",
+                        "delivered",
+                        "cancelled"
+                    ]
+                }
+            }
+        },
         "models.AddToCartRequest": {
             "type": "object",
             "required": [
