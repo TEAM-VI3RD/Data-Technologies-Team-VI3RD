@@ -40,6 +40,8 @@ services:
       - "8080:8080"
     env_file:
       - .env
+    environment:
+      SERVER_HOST: ${SERVER_HOST:-localhost:8080}
     depends_on:
       db:
         condition: service_healthy

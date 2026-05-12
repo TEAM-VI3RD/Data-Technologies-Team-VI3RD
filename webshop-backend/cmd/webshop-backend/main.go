@@ -12,7 +12,8 @@ package main
 import (
 	"log"
 	"net/http"
-	_ "webshop-backend/docs"
+	"os"
+	"webshop-backend/docs"
 	"webshop-backend/internal/db"
 	"webshop-backend/internal/handler"
 	"webshop-backend/internal/middleware"
@@ -24,6 +25,14 @@ import (
 )
 
 func main() {
+	// SERVER_HOST wordt gezet in docker-compose (bijv. 145.x.x.x:8080).
+	host := os.Getenv("SERVER_HOST")
+	if host == "" {
+		host = "localhost:8080"
+	}
+	docs.SwaggerInfo.Host = host
+	log.Printf("Swagger bereikbaar op http://%s/swagger/index.html", host)
+
 	// 1. Connect to PostgreSQL (exits on failure).
 	db.Connect()
 
