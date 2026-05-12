@@ -10,8 +10,8 @@ services:
     env_file:
       - .env
     environment:
-      POSTGRES_DB:       ${DB_NAME}
-      POSTGRES_USER:     ${DB_USER}
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5433:5432"
@@ -24,7 +24,7 @@ services:
       - ./migrations/004_cart.sql:/docker-entrypoint-initdb.d/004_cart.sql
       - ./migrations/005_align_to_new_erd.sql:/docker-entrypoint-initdb.d/005_align_to_new_erd.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -40,6 +40,9 @@ services:
       - "8080:8080"
     env_file:
       - .env
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
     depends_on:
       db:
         condition: service_healthy

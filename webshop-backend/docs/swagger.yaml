@@ -118,6 +118,51 @@ definitions:
     - email
     - password
     type: object
+  models.Order:
+    properties:
+      billing_address_id:
+        type: integer
+      created_at:
+        type: string
+      id:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/models.OrderItem'
+        type: array
+      order_date:
+        type: string
+      shipping_address_id:
+        type: integer
+      status:
+        type: string
+      total_amount:
+        type: number
+      user_id:
+        type: integer
+    type: object
+  models.OrderItem:
+    properties:
+      id:
+        type: integer
+      product_id:
+        type: integer
+      product_name:
+        type: string
+      quantity:
+        type: integer
+      subtotal:
+        type: number
+      unit_price:
+        type: number
+    type: object
+  models.PlaceOrderRequest:
+    properties:
+      billing_address_id:
+        type: integer
+      shipping_address_id:
+        type: integer
+    type: object
   models.Product:
     properties:
       active:
@@ -173,6 +218,19 @@ definitions:
         type: integer
     required:
     - quantity
+    type: object
+  models.UpdateOrderStatusRequest:
+    properties:
+      status:
+        enum:
+        - pending
+        - confirmed
+        - shipped
+        - delivered
+        - cancelled
+        type: string
+    required:
+    - status
     type: object
   models.UpdateProductRequest:
     properties:
@@ -293,6 +351,83 @@ paths:
       summary: Delete an address
       tags:
       - addresses
+  /admin/orders:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Order'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List all orders (admin)
+      tags:
+      - admin
+  /admin/orders/{id}:
+    get:
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Order'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get any order by ID (admin)
+      tags:
+      - admin
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: New status
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateOrderStatusRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update order status (admin)
+      tags:
+      - admin
   /admin/returns:
     get:
       produces:
@@ -601,6 +736,81 @@ paths:
       summary: Update cart item quantity
       tags:
       - cart
+  /orders:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Order'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List my orders
+      tags:
+      - orders
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Order data
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/models.PlaceOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Order'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Place an order from the authenticated user's cart
+      tags:
+      - orders
+  /orders/{id}:
+    get:
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Order'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get my order by ID
+      tags:
+      - orders
   /products:
     get:
       description: Returns all products. Supports filtering via query params.
@@ -801,153 +1011,6 @@ paths:
       summary: Submit a return request
       tags:
       - returns
-  /orders:
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Order data
-        in: body
-        name: body
-        required: false
-        schema:
-          $ref: '#/definitions/models.PlaceOrderRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/models.Order'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "409":
-          description: Conflict
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Place an order
-      tags:
-      - orders
-    get:
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/models.Order'
-            type: array
-      security:
-      - BearerAuth: []
-      summary: List my orders
-      tags:
-      - orders
-  /orders/{id}:
-    get:
-      produces:
-      - application/json
-      parameters:
-      - description: Order ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.Order'
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get my order
-      tags:
-      - orders
-  /admin/orders:
-    get:
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/models.Order'
-            type: array
-      security:
-      - BearerAuth: []
-      summary: List all orders (admin)
-      tags:
-      - admin
-  /admin/orders/{id}:
-    get:
-      produces:
-      - application/json
-      parameters:
-      - description: Order ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.Order'
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get any order (admin)
-      tags:
-      - admin
-    put:
-      consumes:
-      - application/json
-      parameters:
-      - description: Order ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: New status
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/models.UpdateOrderStatusRequest'
-      responses:
-        "204":
-          description: No Content
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Update order status (admin)
-      tags:
-      - admin
 securityDefinitions:
   BearerAuth:
     description: 'Voer in: Bearer {token}'
