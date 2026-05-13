@@ -23,6 +23,7 @@ services:
       - ./migrations/003_add_user_roles.sql:/docker-entrypoint-initdb.d/003_add_user_roles.sql
       - ./migrations/004_cart.sql:/docker-entrypoint-initdb.d/004_cart.sql
       - ./migrations/005_align_to_new_erd.sql:/docker-entrypoint-initdb.d/005_align_to_new_erd.sql
+      - ./migrations/006_seed_products.sql:/docker-entrypoint-initdb.d/006_seed_products.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
