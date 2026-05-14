@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { getProducts } from '../api'
 import type { Product } from '../types'
 import FilterPanel from '../components/FilterPanel'
@@ -32,12 +32,37 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 export default function ProductsPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
+  const [filters, setFilters] = useState<Filters>(() => ({
+    ...DEFAULT_FILTERS,
+    q: searchParams.get('q') ?? '',
+  }))
 
   const debouncedQ = useDebounce(filters.q, 350)
+
+  // Synchroniseer URL-param met de filter-state (zodat de navbar het doorgeeft)
+  useEffect(() => {
+    const urlQ = searchParams.get('q') ?? ''
+    if (urlQ !== filters.q) {
+      setFilters((f) => ({ ...f, q: urlQ }))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
+
+  // Update URL als de gebruiker in de sidebar zelf typt
+  useEffect(() => {
+    const urlQ = searchParams.get('q') ?? ''
+    if (debouncedQ !== urlQ) {
+      const next = new URLSearchParams(searchParams)
+      if (debouncedQ) next.set('q', debouncedQ)
+      else next.delete('q')
+      setSearchParams(next, { replace: true })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedQ])
 
   const load = useCallback(async (f: Filters) => {
     setLoading(true)
@@ -76,22 +101,24 @@ export default function ProductsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false)
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6">
+    <div className="max-w-7xl mx-auto px-4 py-6">
       {/* Page header */}
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-end justify-between mb-5 gap-4">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Producten</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {filters.q ? `Resultaten voor "${filters.q}"` : 'Alle producten'}
+          </h1>
           {!loading && !error && (
-            <p className="text-sm text-gray-400 mt-0.5">
-              {products.length} {products.length === 1 ? 'resultaat' : 'resultaten'}
-              {hasActiveFilters && ' — gefilterd'}
+            <p className="text-sm text-gray-500 mt-1">
+              {products.length} {products.length === 1 ? 'product gevonden' : 'producten gevonden'}
+              {hasActiveFilters && !filters.q && ' (gefilterd)'}
             </p>
           )}
         </div>
         {/* Mobiel: filterknop */}
         <button
           onClick={() => setDrawerOpen(true)}
-          className="md:hidden flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium text-gray-600"
+          className="md:hidden flex items-center gap-2 bg-white border border-gray-200 shadow-sm rounded-lg px-3 py-2 text-sm font-medium text-gray-700"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h18M7 12h10M11 20h2" />
@@ -127,8 +154,8 @@ export default function ProductsPage() {
 
       <div className="flex gap-6">
         {/* Desktop filter sidebar */}
-        <aside className="hidden md:block w-56 shrink-0">
-          <div className="bg-white rounded-xl border border-gray-200 p-4 sticky top-24">
+        <aside className="hidden md:block w-60 shrink-0">
+          <div className="bg-white rounded-xl border border-gray-200 p-5 sticky top-32 shadow-sm">
             <FilterPanel filters={filters} set={set} reset={reset} hasActiveFilters={!!hasActiveFilters} sortOptions={SORT_OPTIONS} />
           </div>
         </aside>
@@ -138,8 +165,8 @@ export default function ProductsPage() {
 
           {/* Loading skeleton */}
           {loading && (
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-              {Array.from({ length: 6 }).map((_, i) => (
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="bg-white rounded-xl border border-gray-200 overflow-hidden animate-pulse">
                   <div className="bg-gray-100 h-40" />
                   <div className="p-4">
@@ -171,7 +198,7 @@ export default function ProductsPage() {
           )}
 
           {!loading && !error && products.length > 0 && (
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {products.map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}
