@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { getProducts } from '../api'
 import type { Product } from '../types'
 import FilterPanel from '../components/FilterPanel'
+import ProductImage from '../components/ProductImage'
 
 const SORT_OPTIONS = [
   { value: '', label: 'Standaard' },
@@ -188,9 +189,9 @@ function ProductCard({ product: p }: { product: Product }) {
       to={`/products/${p.id}`}
       className="group bg-white rounded-xl border border-gray-200 overflow-hidden hover:border-blue-300 hover:shadow-md transition-all duration-200"
     >
-      {/* Placeholder afbeelding */}
-      <div className="bg-gradient-to-br from-gray-50 to-gray-100 h-40 flex items-center justify-center text-4xl select-none">
-        {productEmoji(p.name)}
+      {/* Product afbeelding */}
+      <div className="h-40 overflow-hidden bg-gray-50">
+        <ProductImage name={p.name} size="card" className="group-hover:scale-105 transition-transform duration-300" />
       </div>
 
       <div className="p-4">
@@ -216,17 +217,3 @@ function ProductCard({ product: p }: { product: Product }) {
   )
 }
 
-function productEmoji(name: string): string {
-  const n = name.toLowerCase()
-  if (n.includes('macbook') || n.includes('laptop') || n.includes('thinkpad') || n.includes('zenbook') || n.includes('spectre') || n.includes('xps')) return '💻'
-  if (n.includes('iphone') || n.includes('samsung galaxy s') || n.includes('pixel') || n.includes('oneplus') || n.includes('smartphone')) return '📱'
-  if (n.includes('ipad') || n.includes('tab') || n.includes('tablet')) return '🖥️'
-  if (n.includes('airpods') || n.includes('buds') || n.includes('headphone') || n.includes('koptelefoon') || n.includes('wh-') || n.includes('qc') || n.includes('arctis')) return '🎧'
-  if (n.includes('speaker') || n.includes('jbl') || n.includes('charge')) return '🔊'
-  if (n.includes('switch') || n.includes('playstation') || n.includes('xbox') || n.includes('gaming') || n.includes('game')) return '🎮'
-  if (n.includes('monitor') || n.includes('ultrasharp')) return '🖥️'
-  if (n.includes('muis') || n.includes('mouse') || n.includes('magic mouse')) return '🖱️'
-  if (n.includes('toetsenbord') || n.includes('keys')) return '⌨️'
-  if (n.includes('oplader') || n.includes('adapter') || n.includes('power') || n.includes('kabel') || n.includes('hub')) return '🔌'
-  return '📦'
-}

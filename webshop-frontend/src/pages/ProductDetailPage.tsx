@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { getProduct, addToCart } from '../api'
 import { useAuth } from '../context/AuthContext'
 import { useCartContext } from '../context/CartContext'
+import ProductImage from '../components/ProductImage'
 import type { Product } from '../types'
 
 export default function ProductDetailPage() {
@@ -76,9 +77,9 @@ export default function ProductDetailPage() {
 
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-2">
-          {/* Product afbeelding / placeholder */}
-          <div className="bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center p-12 text-8xl min-h-64 select-none">
-            {getEmoji(product.name)}
+          {/* Product afbeelding */}
+          <div className="min-h-64 overflow-hidden bg-gray-50">
+            <ProductImage name={product.name} size="detail" />
           </div>
 
           {/* Product info */}
@@ -178,17 +179,3 @@ export default function ProductDetailPage() {
   )
 }
 
-function getEmoji(name: string): string {
-  const n = name.toLowerCase()
-  if (n.includes('macbook') || n.includes('laptop') || n.includes('thinkpad') || n.includes('zenbook') || n.includes('spectre') || n.includes('xps')) return '💻'
-  if (n.includes('iphone') || n.includes('samsung galaxy s') || n.includes('pixel') || n.includes('oneplus') || n.includes('smartphone')) return '📱'
-  if (n.includes('ipad') || n.includes('tab') || n.includes('tablet')) return '🖥️'
-  if (n.includes('airpods') || n.includes('buds') || n.includes('headphone') || n.includes('wh-') || n.includes('qc') || n.includes('arctis')) return '🎧'
-  if (n.includes('speaker') || n.includes('jbl') || n.includes('charge')) return '🔊'
-  if (n.includes('switch') || n.includes('playstation') || n.includes('xbox') || n.includes('gaming')) return '🎮'
-  if (n.includes('monitor') || n.includes('ultrasharp')) return '🖥️'
-  if (n.includes('muis') || n.includes('mouse')) return '🖱️'
-  if (n.includes('toetsenbord') || n.includes('keys')) return '⌨️'
-  if (n.includes('oplader') || n.includes('adapter') || n.includes('power') || n.includes('kabel') || n.includes('hub')) return '🔌'
-  return '📦'
-}

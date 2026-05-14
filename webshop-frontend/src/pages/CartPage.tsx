@@ -4,6 +4,7 @@ import { getCart, updateCartItem, removeFromCart, getAddresses, placeOrder } fro
 import { useAuth } from '../context/AuthContext'
 import { useCartContext } from '../context/CartContext'
 import type { CartItem, Address } from '../types'
+import ProductImage from '../components/ProductImage'
 
 export default function CartPage() {
   const { user } = useAuth()
@@ -114,9 +115,9 @@ export default function CartPage() {
             <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
               {items.map((item, idx) => (
                 <div key={item.id} className={`flex items-center gap-3 sm:gap-4 p-4 sm:p-5 ${idx > 0 ? 'border-t border-gray-50' : ''}`}>
-                  {/* Emoji placeholder */}
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-2xl shrink-0 select-none">
-                    📦
+                  {/* Productafbeelding */}
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden bg-gray-50 border border-gray-100 shrink-0">
+                    <ProductImage name={item.product_name} size="card" />
                   </div>
 
                   <div className="flex-1 min-w-0">
