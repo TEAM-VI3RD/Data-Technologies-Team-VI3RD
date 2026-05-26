@@ -41,6 +41,8 @@ func (h *OrderHandler) Place(c *gin.Context) {
 		switch {
 		case errors.Is(err, repository.ErrEmptyCart):
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		case errors.Is(err, repository.ErrInvalidAddress):
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		case errors.Is(err, repository.ErrInsufficientStock):
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		default:

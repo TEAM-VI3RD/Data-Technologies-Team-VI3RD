@@ -15,16 +15,38 @@ func NewOrderRepository(db *sql.DB) *OrderRepository {
 }
 
 var ErrEmptyCart = errors.New("cart is empty")
+var ErrInvalidAddress = errors.New("invalid shipping or billing address")
 
 // PlaceOrder turns the user's cart into an order atomically.
 // Locks product rows (FOR UPDATE), checks stock, snapshots prices,
 // stores total_amount, decrements stock, and clears the cart.
 func (r *OrderRepository) PlaceOrder(userID int, req models.PlaceOrderRequest) (int, error) {
+	if req.ShippingAddressID == nil || req.BillingAddressID == nil {
+		return 0, ErrInvalidAddress
+	}
+
 	tx, err := r.db.Begin()
 	if err != nil {
 		return 0, err
 	}
 	defer tx.Rollback()
+
+	const addressCheckQ = `
+		SELECT 1
+		FROM   addresses
+		WHERE  id = $1
+		AND    user_id = $2`
+
+	for _, addressID := range []int{*req.ShippingAddressID, *req.BillingAddressID} {
+		var ok int
+		err = tx.QueryRow(addressCheckQ, addressID, userID).Scan(&ok)
+		if err == sql.ErrNoRows {
+			return 0, ErrInvalidAddress
+		}
+		if err != nil {
+			return 0, err
+		}
+	}
 
 	// Find the user's cart.
 	var cartID int

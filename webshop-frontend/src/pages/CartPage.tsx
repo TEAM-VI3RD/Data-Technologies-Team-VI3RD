@@ -62,7 +62,12 @@ export default function CartPage() {
       refreshCart()
       navigate(`/orders/${order.id}`)
     } catch (err: unknown) {
-      setOrderMsg(err instanceof Error ? err.message : 'Bestelling mislukt')
+      const message = err instanceof Error ? err.message : 'Bestelling mislukt'
+      setOrderMsg(
+        message === 'invalid shipping or billing address'
+          ? 'Kies een verzend- en factuuradres dat bij jouw account hoort.'
+          : message,
+      )
     } finally {
       setPlacing(false)
     }

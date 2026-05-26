@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/joho/godotenv"
 
@@ -20,11 +21,7 @@ var DB *sql.DB
 // Connect reads env vars, opens the PostgreSQL connection pool, and verifies
 // reachability with Ping. The app exits if the connection cannot be established.
 func Connect() {
-	// godotenv.Load is a no-op when .env is absent (e.g. inside Docker where
-	// variables come from docker-compose env_file). We log but do not fatal.
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found — using environment variables from OS/Docker")
-	}
+	loadEnvFile(".env")
 
 	host := os.Getenv("DB_HOST")
 	port := os.Getenv("DB_PORT")
@@ -56,4 +53,37 @@ func Connect() {
 
 	DB = db
 	log.Printf("PostgreSQL connected (host=%s port=%s db=%s)", host, port, name)
+}
+
+func loadEnvFile(fileName string) {
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Printf("Unable to determine working directory: %v", err)
+		return
+	}
+
+	if path := findEnvFile(wd, fileName); path != "" {
+		if err := godotenv.Load(path); err != nil {
+			log.Printf("Failed to load %s: %v", path, err)
+		}
+		return
+	}
+
+	log.Printf("No %s file found — using environment variables from OS/Docker", fileName)
+}
+
+func findEnvFile(startDir, fileName string) string {
+	currentDir := startDir
+	for {
+		candidate := filepath.Join(currentDir, fileName)
+		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
+			return candidate
+		}
+
+		parentDir := filepath.Dir(currentDir)
+		if parentDir == currentDir {
+			return ""
+		}
+		currentDir = parentDir
+	}
 }
