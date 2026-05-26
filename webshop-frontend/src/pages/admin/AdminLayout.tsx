@@ -24,6 +24,7 @@ export default function AdminLayout() {
         <NavLink to="/admin/orders" className={linkClass}>Bestellingen</NavLink>
         <NavLink to="/admin/users" className={linkClass}>Gebruikers</NavLink>
         <NavLink to="/admin/returns" className={linkClass}>Retouren</NavLink>
+        <NavLink to="/admin/payments" className={linkClass}>Betalingen</NavLink>
       </aside>
       <main className="flex-1 p-8 overflow-auto">
         <Outlet />

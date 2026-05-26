@@ -6,8 +6,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/joho/godotenv"
-
 	// pgx registers itself as a "pgx" driver for database/sql.
 	// The blank import is the standard pattern for side-effect-only imports.
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -20,11 +18,7 @@ var DB *sql.DB
 // Connect reads env vars, opens the PostgreSQL connection pool, and verifies
 // reachability with Ping. The app exits if the connection cannot be established.
 func Connect() {
-	// godotenv.Load is a no-op when .env is absent (e.g. inside Docker where
-	// variables come from docker-compose env_file). We log but do not fatal.
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found — using environment variables from OS/Docker")
-	}
+	// Env-vars worden geladen in main() via godotenv — hier geen actie nodig.
 
 	host := os.Getenv("DB_HOST")
 	port := os.Getenv("DB_PORT")

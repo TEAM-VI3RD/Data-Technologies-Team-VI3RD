@@ -11,11 +11,12 @@ import (
 )
 
 type PaymentHandler struct {
-	repo *repository.PaymentRepository
+	repo      *repository.PaymentRepository
+	orderRepo *repository.OrderRepository
 }
 
-func NewPaymentHandler(repo *repository.PaymentRepository) *PaymentHandler {
-	return &PaymentHandler{repo: repo}
+func NewPaymentHandler(repo *repository.PaymentRepository, orderRepo *repository.OrderRepository) *PaymentHandler {
+	return &PaymentHandler{repo: repo, orderRepo: orderRepo}
 }
 
 // Create godoc
@@ -41,6 +42,12 @@ func (h *PaymentHandler) Create(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	// Zet de bestelling automatisch op "confirmed" na geslaagde betaling.
+	if _, err := h.orderRepo.UpdateStatus(req.OrderID, "confirmed"); err != nil {
+		// Niet fataal — betaling is al aangemaakt, log de fout alleen.
+		_ = err
 	}
 
 	c.JSON(http.StatusCreated, p)

@@ -1,9 +1,17 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { getOrder, createReturn } from '../api'
+import { getOrder, createReturn, createPayment, getPayments } from '../api'
 import { useAuth } from '../context/AuthContext'
 import { OrderStatusBadge } from './OrdersPage'
-import type { Order } from '../types'
+import type { Order, PaymentMethod } from '../types'
+
+const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
+  { value: 'ideal',         label: 'iDEAL' },
+  { value: 'credit_card',   label: 'Creditcard' },
+  { value: 'debit_card',    label: 'Debitcard' },
+  { value: 'paypal',        label: 'PayPal' },
+  { value: 'bank_transfer', label: 'Bankoverschrijving' },
+]
 
 const STATUS_STEPS = ['pending', 'confirmed', 'shipped', 'delivered']
 
@@ -18,14 +26,49 @@ export default function OrderDetailPage() {
   const [returnStatus, setReturnStatus] = useState<'idle' | 'done' | 'error'>('idle')
   const [returnMsg, setReturnMsg] = useState('')
 
+  // Betaling
+  const [payMethod, setPayMethod] = useState<PaymentMethod>('ideal')
+  const [payStatus, setPayStatus] = useState<'idle' | 'done' | 'error'>('idle')
+  const [payMsg, setPayMsg] = useState('')
+  const [paying, setPaying] = useState(false)
+  const [alreadyPaid, setAlreadyPaid] = useState(false)
+
   useEffect(() => {
     if (!user) { navigate('/login'); return }
     if (!id) return
-    getOrder(Number(id))
-      .then(setOrder)
+    const orderId = Number(id)
+    Promise.all([
+      getOrder(orderId),
+      getPayments(),
+    ])
+      .then(([orderData, payments]) => {
+        setOrder(orderData)
+        const paid = (payments ?? []).some(
+          (p) => p.order_id === orderId && p.status === 'paid'
+        )
+        setAlreadyPaid(paid)
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
   }, [id, user, navigate])
+
+  async function handlePay() {
+    if (!order) return
+    setPaying(true)
+    try {
+      await createPayment({ order_id: order.id, amount: order.total_amount, method: payMethod })
+      setPayStatus('done')
+      setAlreadyPaid(true)
+      setPayMsg('Betaling succesvol verwerkt! Je kunt je betalingen bekijken onder "Betalingen".')
+      // Orderstatus lokaal bijwerken naar "confirmed"
+      setOrder((prev) => prev ? { ...prev, status: 'confirmed' } : prev)
+    } catch (err: unknown) {
+      setPayStatus('error')
+      setPayMsg(err instanceof Error ? err.message : 'Betaling mislukt')
+    } finally {
+      setPaying(false)
+    }
+  }
 
   async function handleReturn() {
     if (!order) return
@@ -152,6 +195,62 @@ export default function OrderDetailPage() {
           <span className="text-base font-bold text-gray-900">€{order.total_amount.toFixed(2)}</span>
         </div>
       </div>
+
+      {/* Betalen */}
+      {(order.status === 'pending' || order.status === 'confirmed') && !alreadyPaid && payStatus !== 'done' && (
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-5 h-5 text-gray-400">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+            </svg>
+            <h2 className="text-sm font-semibold text-gray-700">Bestelling betalen</h2>
+          </div>
+          <p className="text-xs text-gray-400 mb-3">
+            Te betalen: <span className="font-bold text-gray-800">€{order.total_amount.toFixed(2)}</span>
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+            {PAYMENT_METHODS.map(({ value, label }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setPayMethod(value)}
+                className={`px-3 py-2 rounded-xl border text-sm font-medium transition-colors ${
+                  payMethod === value
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {payStatus === 'error' && (
+            <p className="text-sm text-red-500 mb-3">{payMsg}</p>
+          )}
+          <button
+            onClick={handlePay}
+            disabled={paying}
+            className="bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors"
+          >
+            {paying ? 'Betaling verwerken…' : `Betaal via ${PAYMENT_METHODS.find(m => m.value === payMethod)?.label}`}
+          </button>
+        </div>
+      )}
+
+      {payStatus === 'done' && (
+        <div className="bg-green-50 border border-green-100 rounded-2xl px-5 py-4 flex items-start gap-3 mb-4">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-green-500 shrink-0 mt-0.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div>
+            <p className="text-sm font-semibold text-green-700">Betaling verwerkt</p>
+            <p className="text-xs text-green-600 mt-0.5">{payMsg}</p>
+            <Link to="/payments" className="text-xs text-blue-600 hover:underline mt-1 inline-block">
+              Bekijk mijn betalingen →
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Retour aanvragen */}
       {order.status === 'delivered' && returnStatus !== 'done' && (

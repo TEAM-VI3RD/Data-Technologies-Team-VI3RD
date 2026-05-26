@@ -6,6 +6,8 @@ import type {
   Order,
   Return,
   User,
+  Payment,
+  CreatePaymentRequest,
 } from './types'
 
 const BASE = '/api'
@@ -168,4 +170,24 @@ export const adminUpdateReturnStatus = (id: number, status: string) =>
   request<void>(`/admin/returns/${id}/status`, {
     method: 'PUT',
     body: JSON.stringify({ status }),
+  })
+
+// Payments – gebruiker
+export const createPayment = (data: CreatePaymentRequest) =>
+  request<Payment>('/payments', { method: 'POST', body: JSON.stringify(data) })
+
+export const getPayments = () => request<Payment[]>('/payments')
+
+export const getPayment = (id: string) => request<Payment>(`/payments/${id}`)
+
+// Admin – payments
+export const adminGetPayments = () => request<Payment[]>('/admin/payments')
+
+export const adminGetPaymentsByOrder = (orderId: number) =>
+  request<Payment[]>(`/admin/payments/order/${orderId}`)
+
+export const adminUpdatePaymentStatus = (id: string, status: string, paid_at?: string) =>
+  request<void>(`/admin/payments/${id}/status`, {
+    method: 'PUT',
+    body: JSON.stringify({ status, ...(paid_at ? { paid_at } : {}) }),
   })

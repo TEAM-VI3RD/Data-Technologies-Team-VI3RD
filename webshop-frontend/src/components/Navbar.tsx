@@ -127,6 +127,7 @@ export default function Navbar() {
                         </div>
                         <DropdownLink to="/profile" onClose={() => setDropdownOpen(false)} icon="user">Mijn profiel</DropdownLink>
                         <DropdownLink to="/orders" onClose={() => setDropdownOpen(false)} icon="orders">Bestellingen</DropdownLink>
+                        <DropdownLink to="/payments" onClose={() => setDropdownOpen(false)} icon="payments">Betalingen</DropdownLink>
                         <DropdownLink to="/addresses" onClose={() => setDropdownOpen(false)} icon="address">Adressen</DropdownLink>
                         {user.is_admin && <DropdownLink to="/admin" onClose={() => setDropdownOpen(false)} icon="admin">Admin paneel</DropdownLink>}
                         <hr className="my-1 border-gray-100" />
@@ -195,6 +196,7 @@ export default function Navbar() {
             </span>
           </NavLink>
           {user && <NavLink to="/orders" className={navLinkClass}>Bestellingen</NavLink>}
+          {user && <NavLink to="/payments" className={navLinkClass}>Betalingen</NavLink>}
           {user && <NavLink to="/addresses" className={navLinkClass}>Adressen</NavLink>}
           {user && <NavLink to="/profile" className={navLinkClass}>Profiel</NavLink>}
           {user?.is_admin && (
@@ -222,6 +224,7 @@ export default function Navbar() {
           <nav className="px-2 py-2 flex flex-col">
             <MobileLink to="/products">Producten</MobileLink>
             {user && <MobileLink to="/orders">Bestellingen</MobileLink>}
+            {user && <MobileLink to="/payments">Betalingen</MobileLink>}
             {user && <MobileLink to="/addresses">Adressen</MobileLink>}
             {user && <MobileLink to="/profile">Mijn profiel</MobileLink>}
             {user && <MobileLink to="/cart">Winkelwagen{cartCount > 0 && ` (${cartCount})`}</MobileLink>}
@@ -252,10 +255,11 @@ function MobileLink({ to, children }: { to: string; children: React.ReactNode })
   )
 }
 
-function DropdownLink({ to, onClose, icon, children }: { to: string; onClose: () => void; icon: 'user' | 'orders' | 'address' | 'admin'; children: React.ReactNode }) {
+function DropdownLink({ to, onClose, icon, children }: { to: string; onClose: () => void; icon: 'user' | 'orders' | 'payments' | 'address' | 'admin'; children: React.ReactNode }) {
   const icons = {
     user: <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />,
     orders: <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />,
+    payments: <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />,
     address: (<>
       <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
