@@ -75,7 +75,7 @@ func main() {
 
 	// CORS — sta verzoeken toe van de frontend (Vite dev + productie).
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:3000", "http://localhost:4173"},
+		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:3000", "http://localhost:4173", "https://techcycle.duckdns.org", "http://techcycle.duckdns.org"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Content-Type", "Authorization"},
 		AllowCredentials: false,
