@@ -2,8 +2,12 @@ package repository
 
 import (
 	"database/sql"
+	"errors"
 	"webshop-backend/internal/models"
 )
+
+var ErrUserHasOrders  = errors.New("user has existing orders and cannot be deleted")
+var ErrUserHasReturns = errors.New("user has existing returns and cannot be deleted")
 
 type UserRepository struct {
 	db *sql.DB
@@ -116,7 +120,24 @@ func (r *UserRepository) SetBlocked(id int, blocked bool) (*models.User, error) 
 }
 
 // Delete removes a user by id. Returns (false, nil) when no row matched.
+// Returns ErrUserHasOrders or ErrUserHasReturns when blocking relations exist.
 func (r *UserRepository) Delete(id int) (bool, error) {
+	var count int
+
+	if err := r.db.QueryRow(`SELECT COUNT(*) FROM orders WHERE user_id = $1`, id).Scan(&count); err != nil {
+		return false, err
+	}
+	if count > 0 {
+		return false, ErrUserHasOrders
+	}
+
+	if err := r.db.QueryRow(`SELECT COUNT(*) FROM returns WHERE user_id = $1`, id).Scan(&count); err != nil {
+		return false, err
+	}
+	if count > 0 {
+		return false, ErrUserHasReturns
+	}
+
 	result, err := r.db.Exec(`DELETE FROM users WHERE id = $1`, id)
 	if err != nil {
 		return false, err
