@@ -24,6 +24,7 @@ services:
       - ./migrations/004_cart.sql:/docker-entrypoint-initdb.d/004_cart.sql
       - ./migrations/005_align_to_new_erd.sql:/docker-entrypoint-initdb.d/005_align_to_new_erd.sql
       - ./migrations/006_seed_products.sql:/docker-entrypoint-initdb.d/006_seed_products.sql
+      - ./migrations/007_seed_admin.sql:/docker-entrypoint-initdb.d/007_seed_admin.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
@@ -38,11 +39,11 @@ services:
     container_name: webshop-backend
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "8090:8090"
     env_file:
       - .env
     environment:
-      SERVER_HOST: ${SERVER_HOST:-localhost:8080}
+      SERVER_HOST: ${SERVER_HOST:-145.24.237.217:8090}
     depends_on:
       db:
         condition: service_healthy
