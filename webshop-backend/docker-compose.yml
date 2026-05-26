@@ -45,6 +45,28 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      mongodb:
+        condition: service_healthy
+
+  # --------------------------------------------------------------------------
+  # MongoDB — payments database
+  # --------------------------------------------------------------------------
+  mongodb:
+    image: mongo:7.0
+    container_name: webshop-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: ${MONGO_DB:-webshop_payments}
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
   db_data:
+  mongo_data:
