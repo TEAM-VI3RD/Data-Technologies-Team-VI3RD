@@ -12,11 +12,12 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
+	"webshop-backend/docs"
 	"webshop-backend/internal/db"
 	"webshop-backend/internal/handler"
 	"webshop-backend/internal/middleware"
 	"webshop-backend/internal/repository"
-	_ "webshop-backend/docs"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -24,8 +25,17 @@ import (
 )
 
 func main() {
-	// 1. Connect to PostgreSQL (exits on failure).
+	// SERVER_HOST wordt gezet in docker-compose (bijv. 145.x.x.x:8080).
+	host := os.Getenv("SERVER_HOST")
+	if host == "" {
+		host = "localhost:8080"
+	}
+	docs.SwaggerInfo.Host = host
+	log.Printf("Swagger bereikbaar op http://%s/swagger/index.html", host)
+
+	// 1. Connect to databases (exits on failure).
 	db.Connect()
+	db.ConnectMongo()
 
 	// 2. Wire dependencies: DB → Repository → Handler.
 	productRepo := repository.NewProductRepository(db.DB)
@@ -46,6 +56,9 @@ func main() {
 
 	returnRepo := repository.NewReturnRepository(db.DB)
 	returnHandler := handler.NewReturnHandler(returnRepo)
+
+	paymentRepo := repository.NewPaymentRepository(db.Payments())
+	paymentHandler := handler.NewPaymentHandler(paymentRepo)
 
 	// 3. Configure the router.
 	router := gin.Default()
@@ -80,6 +93,10 @@ func main() {
 		admin.GET("/orders", orderHandler.ListAll)
 		admin.GET("/orders/:id", orderHandler.GetAny)
 		admin.PUT("/orders/:id/status", orderHandler.UpdateStatus)
+
+		admin.GET("/payments", paymentHandler.ListAll)
+		admin.GET("/payments/order/:order_id", paymentHandler.ListByOrder)
+		admin.PUT("/payments/:id/status", paymentHandler.UpdateStatus)
 	}
 
 	// Address routes — authenticated customers only.
@@ -118,14 +135,29 @@ func main() {
 		orders.GET("/:id", orderHandler.GetMine)
 	}
 
-	// Product routes.
+	// Product routes — read access is public.
 	products := router.Group("/products")
 	{
 		products.GET("", productHandler.GetAll)
 		products.GET("/:id", productHandler.GetByID)
-		products.POST("", productHandler.Create)
-		products.PUT("/:id", productHandler.Update)
-		products.DELETE("/:id", productHandler.Delete)
+	}
+
+	// Product management — admin only (JWT + is_admin = true).
+	productsAdmin := router.Group("/products")
+	productsAdmin.Use(middleware.Auth(), middleware.AdminOnly())
+	{
+		productsAdmin.POST("", productHandler.Create)
+		productsAdmin.PUT("/:id", productHandler.Update)
+		productsAdmin.DELETE("/:id", productHandler.Delete)
+	}
+
+	// Payment routes — authenticated customers only.
+	payments := router.Group("/payments")
+	payments.Use(middleware.Auth())
+	{
+		payments.POST("", paymentHandler.Create)
+		payments.GET("", paymentHandler.ListMine)
+		payments.GET("/:id", paymentHandler.GetMine)
 	}
 
 	// 4. Start HTTP server.

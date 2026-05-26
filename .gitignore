@@ -4,6 +4,7 @@
 
 # Environment
 .env
+.env.local
 
 # IDE
 .idea/
@@ -12,6 +13,13 @@
 # OS
 .DS_Store
 
-.env.local
-.env
+# Node (gebruikt voor rapport-generatie)
+node_modules/
+package-lock.json
+package.json
+
+# Gegenereerde bestanden
+techcycle_rapport.js
+TechCycle_Technisch_Rapport.docx
+~$*.docx
 

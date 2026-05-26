@@ -23,6 +23,7 @@ services:
       - ./migrations/003_add_user_roles.sql:/docker-entrypoint-initdb.d/003_add_user_roles.sql
       - ./migrations/004_cart.sql:/docker-entrypoint-initdb.d/004_cart.sql
       - ./migrations/005_align_to_new_erd.sql:/docker-entrypoint-initdb.d/005_align_to_new_erd.sql
+      - ./migrations/006_seed_products.sql:/docker-entrypoint-initdb.d/006_seed_products.sql
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
       interval: 5s
@@ -41,11 +42,32 @@ services:
     env_file:
       - .env
     environment:
-      DB_HOST: db
-      DB_PORT: 5432
+      SERVER_HOST: ${SERVER_HOST:-localhost:8080}
     depends_on:
       db:
         condition: service_healthy
+      mongodb:
+        condition: service_healthy
+
+  # --------------------------------------------------------------------------
+  # MongoDB — payments database
+  # --------------------------------------------------------------------------
+  mongodb:
+    image: mongo:7.0
+    container_name: webshop-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: ${MONGO_DB:-webshop_payments}
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
   db_data:
+  mongo_data:
