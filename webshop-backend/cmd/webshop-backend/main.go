@@ -91,6 +91,7 @@ func main() {
 		admin.PUT("/returns/:id/status", returnHandler.UpdateStatus)
 
 		admin.GET("/orders", orderHandler.ListAll)
+		admin.GET("/orders/report", orderHandler.OrderFlowReport)
 		admin.GET("/orders/:id", orderHandler.GetAny)
 		admin.PUT("/orders/:id/status", orderHandler.UpdateStatus)
 

@@ -164,6 +164,88 @@ func (r *OrderRepository) ListAll() ([]models.Order, error) {
 	return r.scanOrders(q)
 }
 
+// OrderFlowReport returns an admin report for the complete order flow.
+// It combines order totals, line-item aggregation, and per-user order history
+// with CTEs and window functions so the SQL can be used as advanced-query
+// evidence in the technical report.
+func (r *OrderRepository) OrderFlowReport() ([]models.OrderFlowReport, error) {
+	const q = `
+		WITH order_line_totals AS (
+			SELECT
+				o.id AS order_id,
+				COUNT(oi.id) AS item_count,
+				COUNT(DISTINCT oi.product_id) AS distinct_product_count,
+				COALESCE(SUM(oi.quantity), 0) AS total_quantity
+			FROM   orders o
+			LEFT   JOIN order_items oi ON oi.order_id = o.id
+			GROUP  BY o.id
+		),
+		order_rankings AS (
+			SELECT
+				o.id,
+				o.user_id,
+				o.status,
+				o.order_date,
+				o.total_amount,
+				ROW_NUMBER() OVER (
+					PARTITION BY o.user_id
+					ORDER BY o.order_date, o.id
+				) AS user_order_number,
+				SUM(o.total_amount) OVER (
+					PARTITION BY o.user_id
+				) AS user_lifetime_value,
+				AVG(o.total_amount) OVER (
+					PARTITION BY o.user_id
+				) AS average_order_value
+			FROM orders o
+		)
+		SELECT
+			r.id,
+			r.user_id,
+			r.status,
+			r.order_date,
+			r.total_amount,
+			olt.item_count,
+			olt.distinct_product_count,
+			olt.total_quantity,
+			(r.user_order_number = 1) AS first_order_for_user,
+			r.user_order_number,
+			r.user_lifetime_value,
+			r.average_order_value
+		FROM   order_rankings r
+		JOIN   order_line_totals olt ON olt.order_id = r.id
+		ORDER  BY r.order_date DESC, r.id DESC`
+
+	rows, err := r.db.Query(q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var report []models.OrderFlowReport
+	for rows.Next() {
+		var row models.OrderFlowReport
+		if err := rows.Scan(
+			&row.OrderID,
+			&row.UserID,
+			&row.Status,
+			&row.OrderDate,
+			&row.TotalAmount,
+			&row.ItemCount,
+			&row.DistinctProductCount,
+			&row.TotalQuantity,
+			&row.FirstOrderForUser,
+			&row.UserOrderNumber,
+			&row.UserLifetimeValue,
+			&row.AverageOrderValue,
+		); err != nil {
+			return nil, err
+		}
+		report = append(report, row)
+	}
+	return report, rows.Err()
+}
+
 // GetByID returns an order with its items. ownerID > 0 enforces ownership.
 func (r *OrderRepository) GetByID(orderID, ownerID int) (*models.Order, error) {
 	var o models.Order

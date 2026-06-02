@@ -78,6 +78,27 @@ definitions:
     - street
     - type
     type: object
+  models.CreatePaymentRequest:
+    properties:
+      amount:
+        type: number
+      method:
+        enum:
+        - credit_card
+        - debit_card
+        - paypal
+        - ideal
+        - bank_transfer
+        type: string
+      order_id:
+        type: integer
+      transaction_id:
+        type: string
+    required:
+    - amount
+    - method
+    - order_id
+    type: object
   models.CreateProductRequest:
     properties:
       active:
@@ -141,6 +162,33 @@ definitions:
       user_id:
         type: integer
     type: object
+  models.OrderFlowReport:
+    properties:
+      average_order_value:
+        type: number
+      distinct_product_count:
+        type: integer
+      first_order_for_user:
+        type: boolean
+      item_count:
+        type: integer
+      order_date:
+        type: string
+      order_id:
+        type: integer
+      status:
+        type: string
+      total_amount:
+        type: number
+      total_quantity:
+        type: integer
+      user_id:
+        type: integer
+      user_lifetime_value:
+        type: number
+      user_order_number:
+        type: integer
+    type: object
   models.OrderItem:
     properties:
       id:
@@ -155,6 +203,27 @@ definitions:
         type: number
       unit_price:
         type: number
+    type: object
+  models.Payment:
+    properties:
+      amount:
+        type: number
+      created_at:
+        type: string
+      id:
+        type: string
+      method:
+        type: string
+      order_id:
+        type: integer
+      paid_at:
+        type: string
+      status:
+        type: string
+      transaction_id:
+        type: string
+      user_id:
+        type: integer
     type: object
   models.PlaceOrderRequest:
     properties:
@@ -228,6 +297,20 @@ definitions:
         - shipped
         - delivered
         - cancelled
+        type: string
+    required:
+    - status
+    type: object
+  models.UpdatePaymentStatusRequest:
+    properties:
+      paid_at:
+        type: string
+      status:
+        enum:
+        - pending
+        - paid
+        - failed
+        - refunded
         type: string
     required:
     - status
@@ -428,6 +511,127 @@ paths:
       summary: Update order status (admin)
       tags:
       - admin
+  /admin/orders/report:
+    get:
+      description: Uses CTEs, aggregation, and window functions to show order totals
+        and per-user order history.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.OrderFlowReport'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Advanced order-flow report (admin)
+      tags:
+      - admin
+  /admin/payments:
+    get:
+      description: Returns every payment in the system
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Payment'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all payments
+      tags:
+      - payments
+  /admin/payments/{id}/status:
+    put:
+      consumes:
+      - application/json
+      description: Sets the status (and optionally paid_at) of a payment
+      parameters:
+      - description: Payment ObjectID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New status
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdatePaymentStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update payment status
+      tags:
+      - payments
+  /admin/payments/order/{order_id}:
+    get:
+      description: Returns all payments linked to a specific order
+      parameters:
+      - description: Order ID
+        in: path
+        name: order_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Payment'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List payments for an order
+      tags:
+      - payments
   /admin/returns:
     get:
       produces:
@@ -811,6 +1015,97 @@ paths:
       summary: Get my order by ID
       tags:
       - orders
+  /payments:
+    get:
+      description: Returns all payments for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Payment'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List my payments
+      tags:
+      - payments
+    post:
+      consumes:
+      - application/json
+      description: Creates a payment record in MongoDB for an existing order
+      parameters:
+      - description: Payment data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreatePaymentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Payment'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a payment
+      tags:
+      - payments
+  /payments/{id}:
+    get:
+      description: Returns a payment owned by the authenticated user
+      parameters:
+      - description: Payment ObjectID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Payment'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a payment by ID
+      tags:
+      - payments
   /products:
     get:
       description: Returns all products. Supports filtering via query params.

@@ -130,6 +130,27 @@ func (h *OrderHandler) ListAll(c *gin.Context) {
 	c.JSON(http.StatusOK, orders)
 }
 
+// OrderFlowReport godoc
+// @Summary     Advanced order-flow report (admin)
+// @Description Uses CTEs, aggregation, and window functions to show order totals and per-user order history.
+// @Tags        admin
+// @Produce     json
+// @Security    BearerAuth
+// @Success     200 {array} models.OrderFlowReport
+// @Router      /admin/orders/report [get]
+// OrderFlowReport (admin) returns analytical order-flow rows.
+func (h *OrderHandler) OrderFlowReport(c *gin.Context) {
+	report, err := h.repo.OrderFlowReport()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if report == nil {
+		report = []models.OrderFlowReport{}
+	}
+	c.JSON(http.StatusOK, report)
+}
+
 // GetAny godoc
 // @Summary     Get any order by ID (admin)
 // @Tags        admin
