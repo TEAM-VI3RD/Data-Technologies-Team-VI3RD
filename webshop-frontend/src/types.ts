@@ -89,3 +89,25 @@ export interface Return {
   requested_at: string
   resolved_at: string
 }
+
+export type PaymentMethod = 'credit_card' | 'debit_card' | 'paypal' | 'ideal' | 'bank_transfer'
+export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded'
+
+export interface Payment {
+  id: string          // MongoDB ObjectID als hex-string
+  order_id: number
+  user_id: number
+  amount: number
+  method: PaymentMethod
+  status: PaymentStatus
+  transaction_id: string
+  paid_at: string | null
+  created_at: string
+}
+
+export interface CreatePaymentRequest {
+  order_id: number
+  amount: number
+  method: PaymentMethod
+  transaction_id?: string
+}

@@ -11,11 +11,12 @@ import (
 )
 
 type PaymentHandler struct {
-	repo *repository.PaymentRepository
+	repo      *repository.PaymentRepository
+	orderRepo *repository.OrderRepository
 }
 
-func NewPaymentHandler(repo *repository.PaymentRepository) *PaymentHandler {
-	return &PaymentHandler{repo: repo}
+func NewPaymentHandler(repo *repository.PaymentRepository, orderRepo *repository.OrderRepository) *PaymentHandler {
+	return &PaymentHandler{repo: repo, orderRepo: orderRepo}
 }
 
 // Create godoc
@@ -27,6 +28,7 @@ func NewPaymentHandler(repo *repository.PaymentRepository) *PaymentHandler {
 // @Param       body body     models.CreatePaymentRequest true "Payment data"
 // @Success     201  {object} models.Payment
 // @Failure     400  {object} map[string]string
+// @Failure     404  {object} map[string]string
 // @Failure     500  {object} map[string]string
 // @Security    BearerAuth
 // @Router      /payments [post]
@@ -37,10 +39,30 @@ func (h *PaymentHandler) Create(c *gin.Context) {
 		return
 	}
 
-	p, err := h.repo.Create(userID(c), req)
+	uid := userID(c)
+
+	// Controleer of de bestelling bestaat en van deze gebruiker is.
+	// Voorkomt betalingen voor niet-bestaande of andermans orders (TC-06-03).
+	order, err := h.orderRepo.GetByID(req.OrderID, uid)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+	if order == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "order not found"})
+		return
+	}
+
+	p, err := h.repo.Create(uid, req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Zet de bestelling automatisch op "confirmed" na geslaagde betaling.
+	if _, err := h.orderRepo.UpdateStatus(req.OrderID, "confirmed"); err != nil {
+		// Niet fataal — betaling is al aangemaakt, log de fout alleen.
+		_ = err
 	}
 
 	c.JSON(http.StatusCreated, p)

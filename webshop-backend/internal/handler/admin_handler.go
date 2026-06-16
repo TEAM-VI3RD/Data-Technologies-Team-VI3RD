@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"webshop-backend/internal/models"
 	"webshop-backend/internal/repository"
@@ -100,6 +101,10 @@ func (h *AdminHandler) DeleteUser(c *gin.Context) {
 	}
 	found, err := h.repo.Delete(id)
 	if err != nil {
+		if errors.Is(err, repository.ErrUserHasOrders) || errors.Is(err, repository.ErrUserHasReturns) {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
 		return
 	}

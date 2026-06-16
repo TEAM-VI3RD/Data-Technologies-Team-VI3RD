@@ -19,16 +19,26 @@ import (
 	"webshop-backend/internal/middleware"
 	"webshop-backend/internal/repository"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func main() {
-	// SERVER_HOST wordt gezet in docker-compose (bijv. 145.x.x.x:8080).
+	// 0. Laad .env en .env.local zodat alle os.Getenv-calls hierna kloppen.
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found — using OS/Docker environment")
+	}
+	if err := godotenv.Overload(".env.local"); err == nil {
+		log.Println("Loaded .env.local (local overrides active)")
+	}
+
+	// SERVER_HOST wordt gezet in .env of docker-compose.
 	host := os.Getenv("SERVER_HOST")
 	if host == "" {
-		host = "localhost:8080"
+		host = "localhost:8090"
 	}
 	docs.SwaggerInfo.Host = host
 	log.Printf("Swagger bereikbaar op http://%s/swagger/index.html", host)
@@ -58,10 +68,18 @@ func main() {
 	returnHandler := handler.NewReturnHandler(returnRepo)
 
 	paymentRepo := repository.NewPaymentRepository(db.Payments())
-	paymentHandler := handler.NewPaymentHandler(paymentRepo)
+	paymentHandler := handler.NewPaymentHandler(paymentRepo, orderRepo)
 
 	// 3. Configure the router.
 	router := gin.Default()
+
+	// CORS — sta verzoeken toe van de frontend (Vite dev + productie).
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:3000", "http://localhost:4173", "https://techcycle.duckdns.org", "http://techcycle.duckdns.org"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Content-Type", "Authorization"},
+		AllowCredentials: false,
+	}))
 
 	// Swagger UI — bereikbaar op http://localhost:8080/swagger/index.html
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -162,7 +180,7 @@ func main() {
 	}
 
 	// 4. Start HTTP server.
-	if err := router.Run(":8080"); err != nil {
+	if err := router.Run(":8090"); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}
 }

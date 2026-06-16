@@ -99,6 +99,27 @@ definitions:
     - method
     - order_id
     type: object
+  models.CreatePaymentRequest:
+    properties:
+      amount:
+        type: number
+      method:
+        enum:
+        - credit_card
+        - debit_card
+        - paypal
+        - ideal
+        - bank_transfer
+        type: string
+      order_id:
+        type: integer
+      transaction_id:
+        type: string
+    required:
+    - amount
+    - method
+    - order_id
+    type: object
   models.CreateProductRequest:
     properties:
       active:

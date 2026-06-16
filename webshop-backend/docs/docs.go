@@ -1656,6 +1656,35 @@ const docTemplate = `{
                 }
             }
         },
+        "models.CreatePaymentRequest": {
+            "type": "object",
+            "required": [
+                "amount",
+                "method",
+                "order_id"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "method": {
+                    "type": "string",
+                    "enum": [
+                        "credit_card",
+                        "debit_card",
+                        "paypal",
+                        "ideal",
+                        "bank_transfer"
+                    ]
+                },
+                "order_id": {
+                    "type": "integer"
+                },
+                "transaction_id": {
+                    "type": "string"
+                }
+            }
+        },
         "models.CreateProductRequest": {
             "type": "object",
             "required": [

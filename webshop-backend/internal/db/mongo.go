@@ -16,6 +16,7 @@ var MongoDB *mongo.Database
 // ConnectMongo reads env vars, opens the MongoDB connection, and verifies
 // reachability with Ping. The app exits if the connection cannot be established.
 func ConnectMongo() {
+	// Env-vars worden geladen in main() via godotenv — hier geen actie nodig.
 	uri := os.Getenv("MONGO_URI")
 	dbName := os.Getenv("MONGO_DB")
 

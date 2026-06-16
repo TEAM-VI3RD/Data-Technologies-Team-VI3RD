@@ -18,6 +18,9 @@ import AdminProductsPage from './pages/admin/AdminProductsPage'
 import AdminOrdersPage from './pages/admin/AdminOrdersPage'
 import AdminUsersPage from './pages/admin/AdminUsersPage'
 import AdminReturnsPage from './pages/admin/AdminReturnsPage'
+import AdminPaymentsPage from './pages/admin/AdminPaymentsPage'
+
+import PaymentsPage from './pages/PaymentsPage'
 
 export default function App() {
   return (
@@ -31,6 +34,7 @@ export default function App() {
             <Route path="orders" element={<AdminOrdersPage />} />
             <Route path="users" element={<AdminUsersPage />} />
             <Route path="returns" element={<AdminReturnsPage />} />
+            <Route path="payments" element={<AdminPaymentsPage />} />
           </Route>
 
           <Route
@@ -50,6 +54,7 @@ export default function App() {
                     <Route path="/orders/:id" element={<OrderDetailPage />} />
                     <Route path="/addresses" element={<AddressesPage />} />
                     <Route path="/profile" element={<ProfilePage />} />
+                    <Route path="/payments" element={<PaymentsPage />} />
                   </Routes>
                 </main>
               </div>
