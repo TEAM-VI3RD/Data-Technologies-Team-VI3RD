@@ -19,15 +19,17 @@ func NewPaymentRepository(col *mongo.Collection) *PaymentRepository {
 }
 
 func (r *PaymentRepository) Create(userID int, req models.CreatePaymentRequest) (*models.Payment, error) {
+	now := time.Now()
 	p := models.Payment{
 		ID:            bson.NewObjectID(),
 		OrderID:       req.OrderID,
 		UserID:        userID,
 		Amount:        req.Amount,
 		Method:        req.Method,
-		Status:        "pending",
+		Status:        "paid",
 		TransactionID: req.TransactionID,
-		CreatedAt:     time.Now(),
+		PaidAt:        &now,
+		CreatedAt:     now,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

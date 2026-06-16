@@ -1,10 +1,18 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { getCart, updateCartItem, removeFromCart, getAddresses, placeOrder } from '../api'
+import { getCart, updateCartItem, removeFromCart, getAddresses, placeOrder, createPayment } from '../api'
 import { useAuth } from '../context/AuthContext'
 import { useCartContext } from '../context/CartContext'
-import type { CartItem, Address } from '../types'
+import type { CartItem, Address, PaymentMethod } from '../types'
 import ProductImage from '../components/ProductImage'
+
+const PAYMENT_METHODS: Array<{ value: PaymentMethod; label: string }> = [
+  { value: 'ideal', label: 'iDEAL' },
+  { value: 'paypal', label: 'PayPal' },
+  { value: 'credit_card', label: 'Creditcard' },
+  { value: 'debit_card', label: 'Debitcard' },
+  { value: 'bank_transfer', label: 'Bankoverschrijving' },
+]
 
 export default function CartPage() {
   const { user } = useAuth()
@@ -16,6 +24,7 @@ export default function CartPage() {
   const [error, setError] = useState('')
   const [shippingId, setShippingId] = useState<number | null>(null)
   const [billingId, setBillingId] = useState<number | null>(null)
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('ideal')
   const [orderMsg, setOrderMsg] = useState('')
   const [placing, setPlacing] = useState(false)
 
@@ -59,6 +68,7 @@ export default function CartPage() {
     setOrderMsg('')
     try {
       const order = await placeOrder(shippingId, billingId)
+      await createPayment(order.id, order.total_amount, paymentMethod)
       refreshCart()
       navigate(`/orders/${order.id}`)
     } catch (err: unknown) {
@@ -219,6 +229,18 @@ export default function CartPage() {
                       ))}
                     </select>
                   </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Betaalmethode</label>
+                    <select
+                      value={paymentMethod}
+                      onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {PAYMENT_METHODS.map((method) => (
+                        <option key={method.value} value={method.value}>{method.label}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               )}
 
@@ -231,7 +253,7 @@ export default function CartPage() {
                 disabled={addresses.length === 0 || placing}
                 className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white py-3 rounded-xl font-semibold text-sm transition-colors"
               >
-                {placing ? 'Bezig...' : 'Bestelling plaatsen'}
+                {placing ? 'Betaling verwerken...' : 'Betalen en bestelling plaatsen'}
               </button>
             </div>
           </div>

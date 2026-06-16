@@ -66,6 +66,20 @@ export interface Order {
   items: OrderItem[]
 }
 
+export type PaymentMethod = 'credit_card' | 'debit_card' | 'paypal' | 'ideal' | 'bank_transfer'
+
+export interface Payment {
+  id: string
+  order_id: number
+  user_id: number
+  amount: number
+  method: PaymentMethod
+  status: string
+  transaction_id: string
+  paid_at: string | null
+  created_at: string
+}
+
 export interface Return {
   id: number
   order_id: number

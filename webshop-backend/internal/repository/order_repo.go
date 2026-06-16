@@ -108,8 +108,8 @@ func (r *OrderRepository) PlaceOrder(userID int, req models.PlaceOrderRequest) (
 
 	var orderID int
 	err = tx.QueryRow(`
-		INSERT INTO orders (user_id, total_amount, shipping_address_id, billing_address_id)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO orders (user_id, status, total_amount, shipping_address_id, billing_address_id)
+		VALUES ($1, 'confirmed', $2, $3, $4)
 		RETURNING id`,
 		userID, total, req.ShippingAddressID, req.BillingAddressID,
 	).Scan(&orderID)

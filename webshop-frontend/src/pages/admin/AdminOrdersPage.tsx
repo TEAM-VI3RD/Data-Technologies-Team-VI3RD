@@ -5,8 +5,8 @@ import type { Order } from '../../types'
 const STATUSES = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled']
 
 const STATUS_LABELS: Record<string, string> = {
-  pending: 'In behandeling',
-  confirmed: 'Bevestigd',
+  pending: 'Bestelling geplaatst',
+  confirmed: 'Betaald',
   shipped: 'Verzonden',
   delivered: 'Afgeleverd',
   cancelled: 'Geannuleerd',
