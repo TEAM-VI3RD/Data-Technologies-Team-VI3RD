@@ -4,9 +4,9 @@ import type {
   CartItem,
   Address,
   Order,
+  Payment,
   Return,
   User,
-  Payment,
   CreatePaymentRequest,
 } from './types'
 

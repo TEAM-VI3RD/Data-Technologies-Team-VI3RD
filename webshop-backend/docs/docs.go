@@ -123,6 +123,158 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/orders": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "List all orders (admin)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.Order"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/orders/report": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Uses CTEs, aggregation, and window functions to show order totals and per-user order history.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Advanced order-flow report (admin)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.OrderFlowReport"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/orders/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Get any order by ID (admin)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Order ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Order"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Update order status (admin)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Order ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New status",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.UpdateOrderStatusRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/admin/payments": {
             "get": {
                 "security": [
@@ -779,6 +931,128 @@ const docTemplate = `{
                 }
             }
         },
+        "/orders": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orders"
+                ],
+                "summary": "List my orders",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.Order"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orders"
+                ],
+                "summary": "Place an order from the authenticated user's cart",
+                "parameters": [
+                    {
+                        "description": "Order data",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/models.PlaceOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.Order"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/orders/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orders"
+                ],
+                "summary": "Get my order by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Order ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Order"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/payments": {
             "get": {
                 "security": [
@@ -1382,6 +1656,35 @@ const docTemplate = `{
                 }
             }
         },
+        "models.CreatePaymentRequest": {
+            "type": "object",
+            "required": [
+                "amount",
+                "method",
+                "order_id"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "method": {
+                    "type": "string",
+                    "enum": [
+                        "credit_card",
+                        "debit_card",
+                        "paypal",
+                        "ideal",
+                        "bank_transfer"
+                    ]
+                },
+                "order_id": {
+                    "type": "integer"
+                },
+                "transaction_id": {
+                    "type": "string"
+                }
+            }
+        },
         "models.CreateProductRequest": {
             "type": "object",
             "required": [
@@ -1442,6 +1745,105 @@ const docTemplate = `{
                 }
             }
         },
+        "models.Order": {
+            "type": "object",
+            "properties": {
+                "billing_address_id": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.OrderItem"
+                    }
+                },
+                "order_date": {
+                    "type": "string"
+                },
+                "shipping_address_id": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "total_amount": {
+                    "type": "number"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.OrderFlowReport": {
+            "type": "object",
+            "properties": {
+                "average_order_value": {
+                    "type": "number"
+                },
+                "distinct_product_count": {
+                    "type": "integer"
+                },
+                "first_order_for_user": {
+                    "type": "boolean"
+                },
+                "item_count": {
+                    "type": "integer"
+                },
+                "order_date": {
+                    "type": "string"
+                },
+                "order_id": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "total_amount": {
+                    "type": "number"
+                },
+                "total_quantity": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "integer"
+                },
+                "user_lifetime_value": {
+                    "type": "number"
+                },
+                "user_order_number": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.OrderItem": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "product_id": {
+                    "type": "integer"
+                },
+                "product_name": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "subtotal": {
+                    "type": "number"
+                },
+                "unit_price": {
+                    "type": "number"
+                }
+            }
+        },
         "models.Payment": {
             "type": "object",
             "properties": {
@@ -1470,6 +1872,17 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.PlaceOrderRequest": {
+            "type": "object",
+            "properties": {
+                "billing_address_id": {
+                    "type": "integer"
+                },
+                "shipping_address_id": {
                     "type": "integer"
                 }
             }
@@ -1556,6 +1969,24 @@ const docTemplate = `{
             "properties": {
                 "quantity": {
                     "type": "integer"
+                }
+            }
+        },
+        "models.UpdateOrderStatusRequest": {
+            "type": "object",
+            "required": [
+                "status"
+            ],
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "pending",
+                        "confirmed",
+                        "shipped",
+                        "delivered",
+                        "cancelled"
+                    ]
                 }
             }
         },

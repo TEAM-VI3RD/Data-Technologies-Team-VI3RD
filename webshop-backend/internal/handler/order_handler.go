@@ -18,6 +18,17 @@ func NewOrderHandler(repo *repository.OrderRepository) *OrderHandler {
 	return &OrderHandler{repo: repo}
 }
 
+// Place godoc
+// @Summary     Place an order from the authenticated user's cart
+// @Tags        orders
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       body body models.PlaceOrderRequest false "Order data"
+// @Success     201 {object} models.Order
+// @Failure     400 {object} map[string]string
+// @Failure     409 {object} map[string]string
+// @Router      /orders [post]
 // Place turns the authenticated user's cart into a new order.
 func (h *OrderHandler) Place(c *gin.Context) {
 	var req models.PlaceOrderRequest
@@ -29,6 +40,8 @@ func (h *OrderHandler) Place(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, repository.ErrEmptyCart):
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		case errors.Is(err, repository.ErrInvalidAddress):
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		case errors.Is(err, repository.ErrInsufficientStock):
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
@@ -47,6 +60,13 @@ func (h *OrderHandler) Place(c *gin.Context) {
 	c.JSON(http.StatusCreated, order)
 }
 
+// ListMine godoc
+// @Summary     List my orders
+// @Tags        orders
+// @Produce     json
+// @Security    BearerAuth
+// @Success     200 {array} models.Order
+// @Router      /orders [get]
 // ListMine returns the authenticated user's own orders.
 func (h *OrderHandler) ListMine(c *gin.Context) {
 	orders, err := h.repo.ListForUser(userID(c))
@@ -60,6 +80,15 @@ func (h *OrderHandler) ListMine(c *gin.Context) {
 	c.JSON(http.StatusOK, orders)
 }
 
+// GetMine godoc
+// @Summary     Get my order by ID
+// @Tags        orders
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id path int true "Order ID"
+// @Success     200 {object} models.Order
+// @Failure     404 {object} map[string]string
+// @Router      /orders/{id} [get]
 // GetMine returns a single order owned by the authenticated user.
 func (h *OrderHandler) GetMine(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
@@ -81,6 +110,13 @@ func (h *OrderHandler) GetMine(c *gin.Context) {
 	c.JSON(http.StatusOK, o)
 }
 
+// ListAll godoc
+// @Summary     List all orders (admin)
+// @Tags        admin
+// @Produce     json
+// @Security    BearerAuth
+// @Success     200 {array} models.Order
+// @Router      /admin/orders [get]
 // ListAll (admin) returns every order.
 func (h *OrderHandler) ListAll(c *gin.Context) {
 	orders, err := h.repo.ListAll()
@@ -94,6 +130,36 @@ func (h *OrderHandler) ListAll(c *gin.Context) {
 	c.JSON(http.StatusOK, orders)
 }
 
+// OrderFlowReport godoc
+// @Summary     Advanced order-flow report (admin)
+// @Description Uses CTEs, aggregation, and window functions to show order totals and per-user order history.
+// @Tags        admin
+// @Produce     json
+// @Security    BearerAuth
+// @Success     200 {array} models.OrderFlowReport
+// @Router      /admin/orders/report [get]
+// OrderFlowReport (admin) returns analytical order-flow rows.
+func (h *OrderHandler) OrderFlowReport(c *gin.Context) {
+	report, err := h.repo.OrderFlowReport()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if report == nil {
+		report = []models.OrderFlowReport{}
+	}
+	c.JSON(http.StatusOK, report)
+}
+
+// GetAny godoc
+// @Summary     Get any order by ID (admin)
+// @Tags        admin
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id path int true "Order ID"
+// @Success     200 {object} models.Order
+// @Failure     404 {object} map[string]string
+// @Router      /admin/orders/{id} [get]
 // GetAny (admin) returns one order regardless of owner.
 func (h *OrderHandler) GetAny(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
@@ -115,6 +181,17 @@ func (h *OrderHandler) GetAny(c *gin.Context) {
 	c.JSON(http.StatusOK, o)
 }
 
+// UpdateStatus godoc
+// @Summary     Update order status (admin)
+// @Tags        admin
+// @Accept      json
+// @Security    BearerAuth
+// @Param       id path int true "Order ID"
+// @Param       body body models.UpdateOrderStatusRequest true "New status"
+// @Success     204
+// @Failure     400 {object} map[string]string
+// @Failure     404 {object} map[string]string
+// @Router      /admin/orders/{id} [put]
 // UpdateStatus (admin) sets the order status.
 func (h *OrderHandler) UpdateStatus(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))

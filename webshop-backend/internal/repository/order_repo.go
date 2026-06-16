@@ -15,16 +15,38 @@ func NewOrderRepository(db *sql.DB) *OrderRepository {
 }
 
 var ErrEmptyCart = errors.New("cart is empty")
+var ErrInvalidAddress = errors.New("invalid shipping or billing address")
 
 // PlaceOrder turns the user's cart into an order atomically.
 // Locks product rows (FOR UPDATE), checks stock, snapshots prices,
 // stores total_amount, decrements stock, and clears the cart.
 func (r *OrderRepository) PlaceOrder(userID int, req models.PlaceOrderRequest) (int, error) {
+	if req.ShippingAddressID == nil || req.BillingAddressID == nil {
+		return 0, ErrInvalidAddress
+	}
+
 	tx, err := r.db.Begin()
 	if err != nil {
 		return 0, err
 	}
 	defer tx.Rollback()
+
+	const addressCheckQ = `
+		SELECT 1
+		FROM   addresses
+		WHERE  id = $1
+		AND    user_id = $2`
+
+	for _, addressID := range []int{*req.ShippingAddressID, *req.BillingAddressID} {
+		var ok int
+		err = tx.QueryRow(addressCheckQ, addressID, userID).Scan(&ok)
+		if err == sql.ErrNoRows {
+			return 0, ErrInvalidAddress
+		}
+		if err != nil {
+			return 0, err
+		}
+	}
 
 	// Find the user's cart.
 	var cartID int
@@ -86,8 +108,8 @@ func (r *OrderRepository) PlaceOrder(userID int, req models.PlaceOrderRequest) (
 
 	var orderID int
 	err = tx.QueryRow(`
-		INSERT INTO orders (user_id, total_amount, shipping_address_id, billing_address_id)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO orders (user_id, status, total_amount, shipping_address_id, billing_address_id)
+		VALUES ($1, 'confirmed', $2, $3, $4)
 		RETURNING id`,
 		userID, total, req.ShippingAddressID, req.BillingAddressID,
 	).Scan(&orderID)
@@ -140,6 +162,88 @@ func (r *OrderRepository) ListAll() ([]models.Order, error) {
 		FROM   orders o
 		ORDER  BY o.created_at DESC`
 	return r.scanOrders(q)
+}
+
+// OrderFlowReport returns an admin report for the complete order flow.
+// It combines order totals, line-item aggregation, and per-user order history
+// with CTEs and window functions so the SQL can be used as advanced-query
+// evidence in the technical report.
+func (r *OrderRepository) OrderFlowReport() ([]models.OrderFlowReport, error) {
+	const q = `
+		WITH order_line_totals AS (
+			SELECT
+				o.id AS order_id,
+				COUNT(oi.id) AS item_count,
+				COUNT(DISTINCT oi.product_id) AS distinct_product_count,
+				COALESCE(SUM(oi.quantity), 0) AS total_quantity
+			FROM   orders o
+			LEFT   JOIN order_items oi ON oi.order_id = o.id
+			GROUP  BY o.id
+		),
+		order_rankings AS (
+			SELECT
+				o.id,
+				o.user_id,
+				o.status,
+				o.order_date,
+				o.total_amount,
+				ROW_NUMBER() OVER (
+					PARTITION BY o.user_id
+					ORDER BY o.order_date, o.id
+				) AS user_order_number,
+				SUM(o.total_amount) OVER (
+					PARTITION BY o.user_id
+				) AS user_lifetime_value,
+				AVG(o.total_amount) OVER (
+					PARTITION BY o.user_id
+				) AS average_order_value
+			FROM orders o
+		)
+		SELECT
+			r.id,
+			r.user_id,
+			r.status,
+			r.order_date,
+			r.total_amount,
+			olt.item_count,
+			olt.distinct_product_count,
+			olt.total_quantity,
+			(r.user_order_number = 1) AS first_order_for_user,
+			r.user_order_number,
+			r.user_lifetime_value,
+			r.average_order_value
+		FROM   order_rankings r
+		JOIN   order_line_totals olt ON olt.order_id = r.id
+		ORDER  BY r.order_date DESC, r.id DESC`
+
+	rows, err := r.db.Query(q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var report []models.OrderFlowReport
+	for rows.Next() {
+		var row models.OrderFlowReport
+		if err := rows.Scan(
+			&row.OrderID,
+			&row.UserID,
+			&row.Status,
+			&row.OrderDate,
+			&row.TotalAmount,
+			&row.ItemCount,
+			&row.DistinctProductCount,
+			&row.TotalQuantity,
+			&row.FirstOrderForUser,
+			&row.UserOrderNumber,
+			&row.UserLifetimeValue,
+			&row.AverageOrderValue,
+		); err != nil {
+			return nil, err
+		}
+		report = append(report, row)
+	}
+	return report, rows.Err()
 }
 
 // GetByID returns an order with its items. ownerID > 0 enforces ownership.

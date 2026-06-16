@@ -153,8 +153,8 @@ export default function OrderDetailPage() {
                     )}
                   </div>
                   <span className={`text-[10px] font-medium text-center leading-tight ${current ? 'text-blue-600' : done ? 'text-gray-500' : 'text-gray-300'}`}>
-                    {step === 'pending'   && 'In behandeling'}
-                    {step === 'confirmed' && 'Bevestigd'}
+                    {step === 'pending'   && 'Geplaatst'}
+                    {step === 'confirmed' && 'Betaald'}
                     {step === 'shipped'   && 'Verzonden'}
                     {step === 'delivered' && 'Afgeleverd'}
                   </span>

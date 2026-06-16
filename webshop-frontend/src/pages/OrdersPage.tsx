@@ -5,8 +5,8 @@ import { useAuth } from '../context/AuthContext'
 import type { Order } from '../types'
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
-  pending:   { label: 'In behandeling', color: 'bg-yellow-50 text-yellow-700 border-yellow-100',  dot: 'bg-yellow-400' },
-  confirmed: { label: 'Bevestigd',      color: 'bg-blue-50 text-blue-700 border-blue-100',        dot: 'bg-blue-400' },
+  pending:   { label: 'Bestelling geplaatst', color: 'bg-gray-50 text-gray-700 border-gray-100',   dot: 'bg-gray-400' },
+  confirmed: { label: 'Betaald',              color: 'bg-green-50 text-green-700 border-green-100', dot: 'bg-green-400' },
   shipped:   { label: 'Verzonden',      color: 'bg-purple-50 text-purple-700 border-purple-100',  dot: 'bg-purple-400' },
   delivered: { label: 'Afgeleverd',     color: 'bg-green-50 text-green-700 border-green-100',     dot: 'bg-green-400' },
   cancelled: { label: 'Geannuleerd',    color: 'bg-red-50 text-red-700 border-red-100',           dot: 'bg-red-400' },

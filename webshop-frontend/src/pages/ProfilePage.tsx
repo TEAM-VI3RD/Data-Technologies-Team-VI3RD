@@ -3,7 +3,6 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useCartContext } from '../context/CartContext'
 import { getOrders, getAddresses } from '../api'
-import DevNotice from '../components/DevNotice'
 import { OrderStatusBadge } from './OrdersPage'
 import type { Order } from '../types'
 
@@ -226,16 +225,6 @@ export default function ProfilePage() {
               <Field label="Lid sinds" value={memberSince} />
               <Field label="Account type" value={user.is_admin ? 'Administrator' : 'Klant'} />
               <Field label="Status" value="Actief" valueClass="text-green-600 font-medium" />
-            </div>
-          </Card>
-
-          {/* Instellingen */}
-          <Card>
-            <CardHeader title="Beveiliging" subtitle="Nog niet beschikbaar" />
-            <div className="px-6 pb-6">
-              <DevNotice feature="E-mailadres wijzigen" />
-              <DevNotice feature="Wachtwoord wijzigen" />
-              <DevNotice feature="Tweestapsverificatie" />
             </div>
           </Card>
 
