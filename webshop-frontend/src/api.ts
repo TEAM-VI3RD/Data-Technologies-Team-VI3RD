@@ -5,10 +5,8 @@ import type {
   Address,
   Order,
   Payment,
-  PaymentMethod,
   Return,
   User,
-  Payment,
   CreatePaymentRequest,
 } from './types'
 
@@ -127,17 +125,6 @@ export const placeOrder = (shipping_address_id: number, billing_address_id: numb
   request<Order>('/orders', {
     method: 'POST',
     body: JSON.stringify({ shipping_address_id, billing_address_id }),
-  })
-
-export const createPayment = (order_id: number, amount: number, method: PaymentMethod) =>
-  request<Payment>('/payments', {
-    method: 'POST',
-    body: JSON.stringify({
-      order_id,
-      amount,
-      method,
-      transaction_id: `checkout-${order_id}-${Date.now()}`,
-    }),
   })
 
 export const getOrders = () => request<Order[]>('/orders')

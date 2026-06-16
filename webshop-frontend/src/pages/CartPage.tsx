@@ -68,7 +68,12 @@ export default function CartPage() {
     setOrderMsg('')
     try {
       const order = await placeOrder(shippingId, billingId)
-      await createPayment(order.id, order.total_amount, paymentMethod)
+      await createPayment({
+        order_id: order.id,
+        amount: order.total_amount,
+        method: paymentMethod,
+        transaction_id: `checkout-${order.id}-${Date.now()}`,
+      })
       refreshCart()
       navigate(`/orders/${order.id}`)
     } catch (err: unknown) {
