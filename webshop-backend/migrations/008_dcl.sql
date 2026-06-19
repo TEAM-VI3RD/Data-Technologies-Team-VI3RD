@@ -69,19 +69,3 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
     GRANT ALL PRIVILEGES ON SEQUENCES TO webshop_admin;
 
--- ----------------------------------------------------------------------------
--- 4. Expliciet verbod: webshop_app mag NOOIT DDL uitvoeren
---    (PostgreSQL geeft standaard geen DDL-rechten aan niet-eigenaren;
---     dit blok documenteert die keuze expliciet.)
--- ----------------------------------------------------------------------------
--- REVOKE CREATE ON SCHEMA public FROM webshop_app;  -- al niet toegekend
-
--- ----------------------------------------------------------------------------
--- 5. Verificatie (optioneel, uitvoeren als psql-script)
--- ----------------------------------------------------------------------------
--- \du webshop_app
--- \du webshop_admin
--- SELECT grantee, table_name, privilege_type
--- FROM   information_schema.role_table_grants
--- WHERE  grantee IN ('webshop_app', 'webshop_admin')
--- ORDER  BY grantee, table_name;
