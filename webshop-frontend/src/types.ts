@@ -63,6 +63,7 @@ export interface Order {
   shipping_address_id: number
   billing_address_id: number
   created_at: string
+  item_count: number
   items: OrderItem[]
 }
 

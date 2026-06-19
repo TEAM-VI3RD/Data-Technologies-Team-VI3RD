@@ -18,7 +18,7 @@ export default function LoginPage() {
     try {
       const res = await apiLogin(email, password)
       login(res.token, res.user)
-      navigate(res.user.is_admin ? '/admin' : '/products')
+      navigate('/products')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Inloggen mislukt')
     } finally {

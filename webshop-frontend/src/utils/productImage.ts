@@ -3,6 +3,10 @@
 // Als die ook niet matcht, return null → component toont emoji fallback.
 
 const SPECIFIC: Record<string, string> = {
+  // Demo producten uit de basis-seed
+  'T-Shirt':                            'photo-1521572163474-6864f9cf17ab',
+  'Go Programming':                     'photo-1515879218367-8466d910aaa4',
+
   // Laptops
   'Apple MacBook Pro 13" (2020)':       'photo-1517336714731-489689fd1ca8',
   'Dell XPS 13 (2021)':                 'photo-1593642632559-0c6d3fc62b89',
@@ -13,9 +17,9 @@ const SPECIFIC: Record<string, string> = {
   // Smartphones
   'Apple iPhone 13 128 GB':             'photo-1632661674596-df8be070a5c5',
   'Apple iPhone 12 64 GB':              'photo-1605236453806-6ff36851218e',
-  'Samsung Galaxy S22 256 GB':          'photo-1644501635454-2a09be1c54ab',
+  'Samsung Galaxy S22 256 GB':          'photo-1592750475338-74b7b21085ab',
   'Samsung Galaxy A53 5G':              'photo-1610945265064-0e34e5519bbf',
-  'Google Pixel 7 128 GB':              'photo-1666867875299-cb3e3b3e0bdd',
+  'Google Pixel 7 128 GB':              'photo-1511707171634-5f897ff02aa9',
   'OnePlus 10 Pro 256 GB':              'photo-1598327105666-5b89351aff97',
 
   // Tablets
@@ -47,7 +51,7 @@ const SPECIFIC: Record<string, string> = {
 
   // Opladers & kabels
   'Apple 20W USB-C Power Adapter':      'photo-1583863788434-e58a36330cf0',
-  'Anker 65W GaN USB-C oplader (2 poorten)': 'photo-1606293928250-1efef4e51e98',
+  'Anker 65W GaN USB-C oplader (2 poorten)': 'photo-1583863788434-e58a36330cf0',
   'Baseus 100W USB-C naar USB-C kabel (2 m)': 'photo-1601524909162-ae8725290836',
   'Samsung 25W USB-C oplader':          'photo-1583863788434-e58a36330cf0',
 }
@@ -62,7 +66,7 @@ const CATEGORY_FALLBACK: { match: RegExp; id: string }[] = [
   { match: /monitor|ultrasharp|display/i,                   id: 'photo-1527443224154-c4a3942d3acf' },
   { match: /muis|mouse|magic mouse/i,                       id: 'photo-1527814050087-3793815479db' },
   { match: /toetsenbord|keyboard|keys/i,                    id: 'photo-1587829741301-dc798b83add3' },
-  { match: /oplader|adapter|power|charger/i,                id: 'photo-1606293928250-1efef4e51e98' },
+  { match: /oplader|adapter|power|charger/i,                id: 'photo-1583863788434-e58a36330cf0' },
   { match: /kabel|cable|hub/i,                              id: 'photo-1601524909162-ae8725290836' },
 ]
 

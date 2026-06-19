@@ -147,9 +147,12 @@ func (r *OrderRepository) PlaceOrder(userID int, req models.PlaceOrderRequest) (
 func (r *OrderRepository) ListForUser(userID int) ([]models.Order, error) {
 	const q = `
 		SELECT o.id, o.user_id, o.status, o.order_date, o.total_amount,
-		       o.shipping_address_id, o.billing_address_id, o.created_at
+		       o.shipping_address_id, o.billing_address_id, o.created_at,
+		       COUNT(oi.id) AS item_count
 		FROM   orders o
+		LEFT   JOIN order_items oi ON oi.order_id = o.id
 		WHERE  o.user_id = $1
+		GROUP  BY o.id
 		ORDER  BY o.created_at DESC`
 	return r.scanOrders(q, userID)
 }
@@ -158,8 +161,11 @@ func (r *OrderRepository) ListForUser(userID int) ([]models.Order, error) {
 func (r *OrderRepository) ListAll() ([]models.Order, error) {
 	const q = `
 		SELECT o.id, o.user_id, o.status, o.order_date, o.total_amount,
-		       o.shipping_address_id, o.billing_address_id, o.created_at
+		       o.shipping_address_id, o.billing_address_id, o.created_at,
+		       COUNT(oi.id) AS item_count
 		FROM   orders o
+		LEFT   JOIN order_items oi ON oi.order_id = o.id
+		GROUP  BY o.id
 		ORDER  BY o.created_at DESC`
 	return r.scanOrders(q)
 }
@@ -291,6 +297,7 @@ func (r *OrderRepository) GetByID(orderID, ownerID int) (*models.Order, error) {
 		}
 		o.Items = append(o.Items, it)
 	}
+	o.ItemCount = len(o.Items)
 
 	return &o, rows.Err()
 }
@@ -319,7 +326,7 @@ func (r *OrderRepository) scanOrders(q string, args ...any) ([]models.Order, err
 		var o models.Order
 		if err := rows.Scan(
 			&o.ID, &o.UserID, &o.Status, &o.OrderDate, &o.TotalAmount,
-			&o.ShippingAddressID, &o.BillingAddressID, &o.CreatedAt,
+			&o.ShippingAddressID, &o.BillingAddressID, &o.CreatedAt, &o.ItemCount,
 		); err != nil {
 			return nil, err
 		}
