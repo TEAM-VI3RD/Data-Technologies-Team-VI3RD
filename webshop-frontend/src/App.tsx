@@ -16,6 +16,7 @@ import ProfilePage from './pages/ProfilePage'
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminProductsPage from './pages/admin/AdminProductsPage'
 import AdminOrdersPage from './pages/admin/AdminOrdersPage'
+import AdminOrderDetailPage from './pages/admin/AdminOrderDetailPage'
 import AdminUsersPage from './pages/admin/AdminUsersPage'
 import AdminReturnsPage from './pages/admin/AdminReturnsPage'
 import AdminPaymentsPage from './pages/admin/AdminPaymentsPage'
@@ -32,6 +33,7 @@ export default function App() {
             <Route index element={<Navigate to="products" replace />} />
             <Route path="products" element={<AdminProductsPage />} />
             <Route path="orders" element={<AdminOrdersPage />} />
+            <Route path="orders/:id" element={<AdminOrderDetailPage />} />
             <Route path="users" element={<AdminUsersPage />} />
             <Route path="returns" element={<AdminReturnsPage />} />
             <Route path="payments" element={<AdminPaymentsPage />} />

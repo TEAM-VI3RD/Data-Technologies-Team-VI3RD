@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { adminGetOrders, adminUpdateOrderStatus } from '../../api'
 import type { Order } from '../../types'
 
@@ -73,6 +74,7 @@ export default function AdminOrdersPage() {
                   <th className="px-4 py-3 text-right">Totaal</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Items</th>
+                  <th className="px-4 py-3 text-right">Acties</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -110,7 +112,15 @@ export default function AdminOrdersPage() {
                       </div>
                     </td>
                     <td className="px-4 py-4 text-gray-500">
-                      {(order.items?.length ?? 0)} {(order.items?.length ?? 0) === 1 ? 'product' : 'producten'}
+                      {(order.item_count ?? order.items?.length ?? 0)} {(order.item_count ?? order.items?.length ?? 0) === 1 ? 'product' : 'producten'}
+                    </td>
+                    <td className="px-4 py-4 text-right">
+                      <Link
+                        to={`/admin/orders/${order.id}`}
+                        className="inline-flex items-center rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                      >
+                        Bekijk
+                      </Link>
                     </td>
                   </tr>
                 ))}

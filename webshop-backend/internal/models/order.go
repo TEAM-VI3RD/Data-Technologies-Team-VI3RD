@@ -20,6 +20,7 @@ type Order struct {
 	ShippingAddressID *int        `json:"shipping_address_id"`
 	BillingAddressID  *int        `json:"billing_address_id"`
 	CreatedAt         time.Time   `json:"created_at"`
+	ItemCount         int         `json:"item_count"`
 	Items             []OrderItem `json:"items,omitempty"`
 }
 
